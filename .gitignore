@@ -11,3 +11,4 @@ prompts/
 docs/plan
 test_output.txt
 *.log
+test_out.txt

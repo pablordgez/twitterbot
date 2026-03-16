@@ -18,6 +18,7 @@ from core.models.accounts import PostingAccount
 from core.models.schedules import Schedule, ScheduleSourceList, ScheduleTargetAccount
 from core.models.tweets import TweetList
 from core.services.schedule_logic import increment_version
+from core.services.occurrence_materializer import materialize_for_schedule
 
 
 # ──────────────────────────────────────────────────
@@ -63,6 +64,9 @@ class ScheduleCreateView(LoginRequiredMixin, CreateView):
                 ScheduleSourceList.objects.create(
                     schedule=self.object, tweet_list=tweet_list,
                 )
+            
+            # Generate future occurrences
+            materialize_for_schedule(self.object)
 
         messages.success(self.request, 'Schedule created successfully.')
         return redirect(self.get_success_url())
@@ -109,6 +113,9 @@ class ScheduleUpdateView(LoginRequiredMixin, UpdateView):
                 ScheduleSourceList.objects.create(
                     schedule=self.object, tweet_list=tweet_list,
                 )
+
+            # Regenerate future occurrences
+            materialize_for_schedule(self.object)
 
         messages.success(self.request, 'Schedule updated successfully.')
         return redirect(self.get_success_url())
