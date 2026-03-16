@@ -53,8 +53,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
+    'core.middleware.security.SecurityHeadersMiddleware',
     'core.middleware.setup.FirstRunMiddleware',
 ]
+
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 ROOT_URLCONF = 'twitterbot.urls'
 
