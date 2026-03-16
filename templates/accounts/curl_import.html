@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-xl">
+    <div class="page-header d-print-none">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Import cURL for {{ account.name }}
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <a href="{% url 'core:account_detail' account.pk %}" class="btn btn-secondary">
+                    Back to Account
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">cURL Parser Error</h3>
+            </div>
+            <div class="card-body">
+                <form action="{% url 'core:account_import' account.pk %}" method="post">
+                    {% csrf_token %}
+                    {% if curl_form.non_field_errors %}
+                    <div class="alert alert-danger">{{ curl_form.non_field_errors }}</div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">cURL Import</label>
+                        {{ curl_form.curl_text }}
+                        {% if curl_form.curl_text.errors %}<div class="text-danger mt-1">{{ curl_form.curl_text.errors }}</div>{% endif %}
+                        <div class="form-hint mt-2">{{ curl_form.curl_text.help_text }}</div>
+                    </div>
+                    
+                    <div>
+                        <button type="submit" class="btn btn-primary">Extract and Save Secrets</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
