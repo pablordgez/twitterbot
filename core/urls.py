@@ -12,6 +12,7 @@ from .views.tweet_lists import (
 from .views.tweet_entries import (
     TweetEntryCreateView, TweetEntryUpdateView, TweetEntryDeleteView
 )
+from .views.csv_import import CSVImportView
 app_name = 'core'
 
 urlpatterns = [
@@ -33,6 +34,8 @@ urlpatterns = [
     path('tweet-lists/<int:pk>/', TweetListDetailView.as_view(), name='tweet_list_detail'),
     path('tweet-lists/<int:pk>/edit/', TweetListUpdateView.as_view(), name='tweet_list_update'),
     path('tweet-lists/<int:pk>/delete/', TweetListDeleteView.as_view(), name='tweet_list_delete'),
+    path('tweet-lists/<int:list_pk>/import/', CSVImportView.as_view(), name='csv_import'),
+    path('tweet-lists/import/', CSVImportView.as_view(), name='csv_import_general'),
 
     path('tweet-lists/<int:list_pk>/entries/create/', TweetEntryCreateView.as_view(), name='tweet_entry_create'),
     path('tweet-entries/<int:pk>/edit/', TweetEntryUpdateView.as_view(), name='tweet_entry_update'),

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Import CSV - Tweet List: {{ form.initial.target_list.name|default:"Select List" }}{% endblock %}
+
+{% block page_title %}Import Tweets from CSV{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Import CSV Data</h3>
+  </div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label required">{{ form.target_list.label }}</label>
+        {{ form.target_list }}
+        {% if form.target_list.errors %}
+        <div class="invalid-feedback d-block">{{ form.target_list.errors|join:", " }}</div>
+        {% endif %}
+        <small class="form-hint">{{ form.target_list.help_text }}</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label required">Import Method</label>
+        <div>
+          {% for radio in form.import_mode %}
+          <label class="form-check form-check-inline">
+            {{ radio.tag }}
+            <span class="form-check-label">{{ radio.choice_label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <!-- We can use simple JS to toggle the visibility based on import mode -->
+      <div class="mb-3" id="file_container">
+        <label class="form-label">{{ form.csv_file.label }}</label>
+        {{ form.csv_file }}
+        {% if form.csv_file.errors %}
+        <div class="invalid-feedback d-block">{{ form.csv_file.errors|join:", " }}</div>
+        {% endif %}
+        <small class="form-hint">{{ form.csv_file.help_text }} One tweet per row.</small>
+      </div>
+
+      <div class="mb-3" id="text_container" style="display: none;">
+        <label class="form-label">{{ form.csv_text.label }}</label>
+        {{ form.csv_text }}
+        {% if form.csv_text.errors %}
+        <div class="invalid-feedback d-block">{{ form.csv_text.errors|join:", " }}</div>
+        {% endif %}
+        <small class="form-hint">{{ form.csv_text.help_text }}</small>
+      </div>
+
+      <div class="form-footer">
+        <button type="submit" class="btn btn-primary w-100">Import Data</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const fileContainer = document.getElementById("file_container");
+    const textContainer = document.getElementById("text_container");
+    const radios = document.querySelectorAll("input[name='import_mode']");
+    
+    function updateVisibility() {
+      let selected = document.querySelector("input[name='import_mode']:checked").value;
+      if (selected === 'file') {
+        fileContainer.style.display = 'block';
+        textContainer.style.display = 'none';
+      } else {
+        fileContainer.style.display = 'none';
+        textContainer.style.display = 'block';
+      }
+    }
+    
+    radios.forEach(r => r.addEventListener("change", updateVisibility));
+    updateVisibility();
+  });
+</script>
+{% endblock %}
