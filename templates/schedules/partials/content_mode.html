@@ -1,0 +1,62 @@
+{# Content mode conditional fields — toggled by content_mode radio via JS #}
+
+{# Fixed New: textarea #}
+<div class="content-mode-group" id="cm-fixed_new" {% if content_mode != "fixed_new" %}style="display:none;"{% endif %}>
+  <div class="mb-3">
+    <label class="form-label">Tweet Text</label>
+    {{ form.fixed_content }}
+    {% if form.fixed_content.errors %}<div class="text-danger mt-1">{{ form.fixed_content.errors }}</div>{% endif %}
+    <small class="form-hint">Enter the exact text to post.</small>
+  </div>
+</div>
+
+{# Fixed From List: single list selector #}
+<div class="content-mode-group" id="cm-fixed_from_list" {% if content_mode != "fixed_from_list" %}style="display:none;"{% endif %}>
+  <div class="mb-3">
+    <label class="form-label">Source List</label>
+    <div>
+      {% for checkbox in form.source_lists %}
+      <label class="form-check">
+        {{ checkbox.tag }}
+        <span class="form-check-label">{{ checkbox.choice_label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.source_lists.errors %}<div class="text-danger mt-1">{{ form.source_lists.errors }}</div>{% endif %}
+    <small class="form-hint">Select one list to pull content from.</small>
+  </div>
+</div>
+
+{# Random From List: single list + label #}
+<div class="content-mode-group" id="cm-random_from_list" {% if content_mode != "random_from_list" %}style="display:none;"{% endif %}>
+  <div class="mb-3">
+    <label class="form-label">Source List</label>
+    <div>
+      {% for checkbox in form.source_lists %}
+      <label class="form-check">
+        {{ checkbox.tag }}
+        <span class="form-check-label">{{ checkbox.choice_label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.source_lists.errors %}<div class="text-danger mt-1">{{ form.source_lists.errors }}</div>{% endif %}
+    <small class="form-hint">A random tweet from this list will be selected at post time.</small>
+  </div>
+</div>
+
+{# Random From Lists: multi-select list checkboxes #}
+<div class="content-mode-group" id="cm-random_from_lists" {% if content_mode != "random_from_lists" %}style="display:none;"{% endif %}>
+  <div class="mb-3">
+    <label class="form-label">Source Lists</label>
+    <div>
+      {% for checkbox in form.source_lists %}
+      <label class="form-check">
+        {{ checkbox.tag }}
+        <span class="form-check-label">{{ checkbox.choice_label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.source_lists.errors %}<div class="text-danger mt-1">{{ form.source_lists.errors }}</div>{% endif %}
+    <small class="form-hint">Select one or more lists. A random tweet from the combined pool will be selected at post time.</small>
+  </div>
+</div>

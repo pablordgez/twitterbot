@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load ui_tags %}
+
+{% block page_title %}Schedules{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:schedule_create' %}" class="btn btn-primary">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+  New Schedule
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Content Mode</th>
+          <th>Timezone</th>
+          <th>Status</th>
+          <th>Accounts</th>
+          <th>Created</th>
+          <th class="w-1">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for schedule in schedules %}
+        <tr>
+          <td><a href="{% url 'core:schedule_detail' pk=schedule.pk %}">#{{ schedule.pk }}</a></td>
+          <td>{% schedule_type_badge schedule.schedule_type %}</td>
+          <td>{% content_mode_badge schedule.content_mode %}</td>
+          <td>{{ schedule.timezone_name }}</td>
+          <td>{% status_badge schedule.status %}</td>
+          <td>
+            {% for sta in schedule.target_accounts.all %}
+              <span class="badge bg-secondary-lt">{{ sta.account.name }}</span>
+            {% endfor %}
+          </td>
+          <td>{{ schedule.created_at|date:"Y-m-d H:i" }}</td>
+          <td>
+            <div class="btn-list flex-nowrap">
+              <a href="{% url 'core:schedule_detail' pk=schedule.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+              {% if schedule.status != 'canceled' %}
+              <a href="{% url 'core:schedule_update' pk=schedule.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <form action="{% url 'core:schedule_cancel' pk=schedule.pk %}" method="post" class="d-inline" onsubmit="return confirm('Cancel this schedule?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-secondary">No schedules yet. <a href="{% url 'core:schedule_create' %}">Create one</a>.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

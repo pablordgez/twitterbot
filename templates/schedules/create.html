@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load ui_tags %}
+
+{% block page_title %}{% if object %}Edit Schedule #{{ object.pk }}{% else %}New Schedule{% endif %}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:schedule_list' %}" class="btn btn-secondary">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <form action="" method="post" class="card" id="schedule-form">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="card-body pb-0">
+        <div class="alert alert-danger">
+          <ul class="mb-0">
+            {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card-body">
+        {# ── Schedule Type ── #}
+        <div class="mb-3">
+          <label class="form-label required">Schedule Type</label>
+          <div class="d-flex gap-3">
+            {% for radio in form.schedule_type %}
+            <label class="form-check form-check-inline">
+              {{ radio.tag }}
+              <span class="form-check-label">{{ radio.choice_label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% if form.schedule_type.errors %}<div class="text-danger mt-1">{{ form.schedule_type.errors }}</div>{% endif %}
+        </div>
+
+        {# ── Start Date/Time ── #}
+        <div class="mb-3">
+          <label class="form-label required">Start Date &amp; Time</label>
+          {{ form.start_datetime }}
+          {% if form.start_datetime.errors %}<div class="text-danger mt-1">{{ form.start_datetime.errors }}</div>{% endif %}
+        </div>
+
+        {# ── Timezone ── #}
+        <div class="mb-3">
+          <label class="form-label required">Timezone</label>
+          <div>
+            {% for radio in form.timezone_mode %}
+            <label class="form-check">
+              {{ radio.tag }}
+              <span class="form-check-label">{{ radio.choice_label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <div class="mt-2" id="timezone-other-wrapper" style="{% if form.timezone_mode.value != 'other' %}display:none;{% endif %}">
+            {{ form.timezone_other }}
+            {% if form.timezone_other.errors %}<div class="text-danger mt-1">{{ form.timezone_other.errors }}</div>{% endif %}
+          </div>
+          {% if form.timezone_mode.errors %}<div class="text-danger mt-1">{{ form.timezone_mode.errors }}</div>{% endif %}
+        </div>
+
+        {# ── Target Accounts ── #}
+        <div class="mb-3">
+          <label class="form-label required">Target Accounts</label>
+          <div>
+            {% for checkbox in form.target_accounts %}
+            <label class="form-check">
+              {{ checkbox.tag }}
+              <span class="form-check-label">{{ checkbox.choice_label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% if form.target_accounts.errors %}<div class="text-danger mt-1">{{ form.target_accounts.errors }}</div>{% endif %}
+          {% if not form.target_accounts.field.queryset.exists %}
+          <small class="form-hint text-warning">No active accounts configured. <a href="{% url 'core:account_create' %}">Create one first.</a></small>
+          {% endif %}
+        </div>
+
+        {# ── Content Mode ── #}
+        <div class="mb-3">
+          <label class="form-label required">Content Mode</label>
+          <div>
+            {% for radio in form.content_mode %}
+            <label class="form-check">
+              {{ radio.tag }}
+              <span class="form-check-label">{{ radio.choice_label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% if form.content_mode.errors %}<div class="text-danger mt-1">{{ form.content_mode.errors }}</div>{% endif %}
+        </div>
+
+        {# ── Content Mode Conditional Fields ── #}
+        <div id="content-mode-fields">
+          {% include "schedules/partials/content_mode.html" with content_mode=form.content_mode.value %}
+        </div>
+
+        {# ── Recurring Fields ── #}
+        <div id="recurring-fields">
+          {% include "schedules/partials/recurring_fields.html" with show_recurring=show_recurring %}
+        </div>
+
+        {# ── DST Indicator ── #}
+        <div id="dst-indicator" class="alert alert-info mt-3" style="{% if not show_dst_indicator %}display:none;{% endif %}">
+          ⏰ Automatic DST adjustment based on <strong id="dst-tz-name">{{ form.instance.timezone_name }}</strong>
+        </div>
+
+      </div>
+
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary">
+          {% if object %}Update Schedule{% else %}Create Schedule{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('schedule-form');
+
+  // ── Timezone mode toggle ──
+  const tzRadios = form.querySelectorAll('input[name="timezone_mode"]');
+  const tzOtherWrapper = document.getElementById('timezone-other-wrapper');
+  tzRadios.forEach(function(r) {
+    r.addEventListener('change', function() {
+      tzOtherWrapper.style.display = this.value === 'other' ? '' : 'none';
+      updateDstIndicator();
+    });
+  });
+
+  // ── Schedule type toggle → show/hide recurring fields ──
+  const typeRadios = form.querySelectorAll('input[name="schedule_type"]');
+  const recurringFields = document.getElementById('recurring-fields-inner');
+  typeRadios.forEach(function(r) {
+    r.addEventListener('change', function() {
+      if (recurringFields) {
+        recurringFields.style.display = this.value === 'recurring' ? '' : 'none';
+      }
+      updateDstIndicator();
+    });
+  });
+
+  // ── Content mode toggle → show/hide conditional field groups ──
+  const cmRadios = form.querySelectorAll('input[name="content_mode"]');
+  cmRadios.forEach(function(r) {
+    r.addEventListener('change', function() {
+      document.querySelectorAll('.content-mode-group').forEach(function(el) {
+        el.style.display = 'none';
+      });
+      var target = document.getElementById('cm-' + this.value);
+      if (target) target.style.display = '';
+    });
+  });
+
+  // ── DST indicator logic ──
+  function updateDstIndicator() {
+    var indicator = document.getElementById('dst-indicator');
+    var tzName = document.getElementById('dst-tz-name');
+    var schedType = form.querySelector('input[name="schedule_type"]:checked');
+    var tzMode = form.querySelector('input[name="timezone_mode"]:checked');
+
+    var isRecurring = schedType && schedType.value === 'recurring';
+    var isNonUtc = true;
+    var displayTz = '';
+
+    if (tzMode) {
+      if (tzMode.value === 'utc') {
+        isNonUtc = false;
+        displayTz = 'UTC';
+      } else if (tzMode.value === 'system') {
+        displayTz = '{{ form.system_tz }}';
+        isNonUtc = displayTz !== 'UTC';
+      } else {
+        var otherInput = form.querySelector('input[name="timezone_other"]');
+        displayTz = otherInput ? otherInput.value : '';
+        isNonUtc = displayTz !== 'UTC';
+      }
+    }
+
+    if (indicator) {
+      indicator.style.display = (isRecurring && isNonUtc) ? '' : 'none';
+      if (tzName) tzName.textContent = displayTz;
+    }
+  }
+
+  // Initial state
+  updateDstIndicator();
+});
+</script>
+{% endblock %}

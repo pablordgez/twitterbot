@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load ui_tags %}
+
+{% block page_title %}Schedule #{{ schedule.pk }}{% endblock %}
+
+{% block page_actions %}
+{% if schedule.status != 'canceled' %}
+<a href="{% url 'core:schedule_update' pk=schedule.pk %}" class="btn btn-outline-secondary">Edit</a>
+<form action="{% url 'core:schedule_cancel' pk=schedule.pk %}" method="post" class="d-inline" onsubmit="return confirm('Cancel this schedule and all future occurrences?');">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline-danger">Cancel Schedule</button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Schedule Details</h3>
+        <div class="card-actions">
+          {% schedule_type_badge schedule.schedule_type %}
+          {% status_badge schedule.status %}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="datagrid">
+          <div class="datagrid-item">
+            <div class="datagrid-title">Schedule Type</div>
+            <div class="datagrid-content">{% schedule_type_badge schedule.schedule_type %}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Status</div>
+            <div class="datagrid-content">{% status_badge schedule.status %}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Content Mode</div>
+            <div class="datagrid-content">{% content_mode_badge schedule.content_mode %}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Timezone</div>
+            <div class="datagrid-content">{{ schedule.timezone_name }}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Start</div>
+            <div class="datagrid-content">{{ schedule.start_datetime|date:"Y-m-d H:i" }}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Version</div>
+            <div class="datagrid-content">v{{ schedule.version }}</div>
+          </div>
+
+          {% if schedule.schedule_type == 'recurring' %}
+          <div class="datagrid-item">
+            <div class="datagrid-title">Interval</div>
+            <div class="datagrid-content">Every {{ schedule.interval_value }} {{ schedule.interval_type }}</div>
+          </div>
+          {% if schedule.random_resolution_mode %}
+          <div class="datagrid-item">
+            <div class="datagrid-title">Random Resolution</div>
+            <div class="datagrid-content">{{ schedule.get_random_resolution_mode_display }}</div>
+          </div>
+          {% endif %}
+          <div class="datagrid-item">
+            <div class="datagrid-title">Reuse</div>
+            <div class="datagrid-content">{% if schedule.reuse_enabled %}Enabled{% else %}Disabled{% endif %}</div>
+          </div>
+          {% if schedule.exhaustion_behavior %}
+          <div class="datagrid-item">
+            <div class="datagrid-title">Exhaustion Behavior</div>
+            <div class="datagrid-content">{{ schedule.get_exhaustion_behavior_display }}</div>
+          </div>
+          {% endif %}
+          {% endif %}
+
+          {% if schedule.fixed_content %}
+          <div class="datagrid-item" style="grid-column: 1 / -1;">
+            <div class="datagrid-title">Fixed Content</div>
+            <div class="datagrid-content">
+              <pre class="mb-0" style="white-space: pre-wrap;">{{ schedule.fixed_content }}</pre>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if show_dst_indicator %}
+        <div class="alert alert-info mt-3 mb-0">
+          ⏰ Automatic DST adjustment based on <strong>{{ schedule.timezone_name }}</strong>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    {# Target Accounts #}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Target Accounts</h3>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for account in target_accounts %}
+        <a href="{% url 'core:account_detail' pk=account.pk %}" class="list-group-item list-group-item-action">
+          {{ account.name }}
+          {% if not account.is_active %}<span class="badge bg-yellow-lt ms-1">Inactive</span>{% endif %}
+        </a>
+        {% empty %}
+        <div class="list-group-item text-secondary">No target accounts</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Source Lists #}
+    {% if source_lists %}
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Source Lists</h3>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for tl in source_lists %}
+        <a href="{% url 'core:tweet_list_detail' pk=tl.pk %}" class="list-group-item list-group-item-action">
+          {{ tl.name }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

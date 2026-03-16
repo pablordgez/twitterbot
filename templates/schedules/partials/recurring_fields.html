@@ -1,0 +1,52 @@
+{# Recurring-only fields partial — shown/hidden via JS when schedule_type = "recurring" #}
+<div id="recurring-fields-inner" {% if not show_recurring %}style="display:none;"{% endif %}>
+  <hr class="my-3">
+  <h4 class="mb-3">Recurring Settings</h4>
+
+  {# Interval #}
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label required">Interval Type</label>
+      {{ form.interval_type }}
+      {% if form.interval_type.errors %}<div class="text-danger mt-1">{{ form.interval_type.errors }}</div>{% endif %}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label required">Every</label>
+      {{ form.interval_value }}
+      {% if form.interval_value.errors %}<div class="text-danger mt-1">{{ form.interval_value.errors }}</div>{% endif %}
+      <small class="form-hint">Number of hours or days between occurrences.</small>
+    </div>
+  </div>
+
+  {# Random resolution mode — only for random content + multi-account #}
+  <div class="mb-3">
+    <label class="form-label">Random Resolution</label>
+    <div>
+      {% for radio in form.random_resolution_mode %}
+      <label class="form-check form-check-inline">
+        {{ radio.tag }}
+        <span class="form-check-label">{{ radio.choice_label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.random_resolution_mode.errors %}<div class="text-danger mt-1">{{ form.random_resolution_mode.errors }}</div>{% endif %}
+    <small class="form-hint">Shared: all accounts post the same random tweet. Per-account: each account gets a different random tweet.</small>
+  </div>
+
+  {# Reuse toggle #}
+  <div class="mb-3">
+    <label class="form-check">
+      {{ form.reuse_enabled }}
+      <span class="form-check-label">Allow reuse of previously posted tweets</span>
+    </label>
+    {% if form.reuse_enabled.errors %}<div class="text-danger mt-1">{{ form.reuse_enabled.errors }}</div>{% endif %}
+  </div>
+
+  {# Exhaustion behavior — shown when reuse is disabled #}
+  <div class="mb-3">
+    <label class="form-label">When all tweets have been used</label>
+    {{ form.exhaustion_behavior }}
+    {% if form.exhaustion_behavior.errors %}<div class="text-danger mt-1">{{ form.exhaustion_behavior.errors }}</div>{% endif %}
+    <small class="form-hint">What to do when all tweets in the list have been posted (only applies when reuse is disabled).</small>
+  </div>
+</div>
