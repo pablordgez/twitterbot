@@ -1,2 +1,7 @@
 prompts/
 docs/plan
+test_output.txt
+core/__pycache__
+middleware/__pycache__
+views/__pycache__
+forms/__pycache__
