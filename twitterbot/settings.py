@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
+    'core.middleware.setup.FirstRunMiddleware',
 ]
 
 ROOT_URLCONF = 'twitterbot.urls'
@@ -153,7 +154,6 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
 
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=15)
-AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
 
 # --- Tweet Settings ---
 
@@ -161,3 +161,8 @@ TWEET_MIN_LENGTH = int(os.environ.get('TWEET_MIN_LENGTH', 1))
 TWEET_MAX_LENGTH = int(os.environ.get('TWEET_MAX_LENGTH', 280))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+

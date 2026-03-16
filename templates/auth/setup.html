@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>First-Run Setup | Twitter Bot</title>
+</head>
+<body>
+    <h1>First-Run Setup</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Create Admin Account</button>
+    </form>
+</body>
+</html>
