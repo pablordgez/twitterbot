@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-xl">
+    <div class="page-body">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Delete Account</h3>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="mb-3">Are you sure you want to delete "{{ object.name }}"?</h3>
+                        
+                        <p class="text-muted">This action cannot be undone. All credentials for this account will be permanently removed.</p>
+
+                        {% if affected_schedules %}
+                            <div class="alert alert-danger mt-4">
+                                <h4 class="alert-title">Warning: Dependency Impact</h4>
+                                <div class="text-muted mb-3">Deleting this account will automatically cancel the following active schedules:</div>
+                                <ul>
+                                    {% for schedule in affected_schedules %}
+                                        <li>Schedule ID #{{ schedule.id }} (Type: {{ schedule.get_schedule_type_display }})</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-end">
+                        <form action="" method="post">
+                            {% csrf_token %}
+                            <a href="{% url 'core:account_detail' object.pk %}" class="btn btn-secondary me-2">Cancel</a>
+                            <button type="submit" class="btn btn-danger">Yes, Delete Account</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

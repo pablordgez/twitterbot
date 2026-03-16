@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-xl">
+    <div class="page-header d-print-none">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Account: {{ account.name }}
+                </h2>
+                <div class="text-muted mt-1">
+                    Added {{ account.created_at|date:"Y-m-d H:i" }} &bull;
+                    {% if account.is_active %}
+                        <span class="text-success">&bull; Active</span>
+                    {% else %}
+                        <span class="text-secondary">&bull; Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <a href="{% url 'core:account_update' account.pk %}" class="btn btn-secondary">
+                    Edit Settings
+                </a>
+                <a href="{% url 'core:account_delete' account.pk %}" class="btn btn-danger">
+                    Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div class="row row-cards">
+            
+            <!-- Left col: Credentials & Import -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">X/Twitter Authentication</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if secret_masked %}
+                            <div class="alert alert-success">
+                                <h4 class="alert-title">Credentials Configured</h4>
+                                <div class="text-muted">Secret Hash: <code>{{ secret_masked }}</code></div>
+                            </div>
+                            
+                            <!-- Test Post Form -->
+                            <form action="{% url 'core:account_test_post' account.pk %}" method="post" class="mt-3" onsubmit="return confirm('This will post the text \'test\' to X/Twitter. Proceed?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-primary">
+                                    Test Post
+                                </button>
+                                <span class="ms-2 text-muted small">Verifies credentials still work.</span>
+                            </form>
+                            
+                            <hr class="my-4">
+                            <h4 class="mb-3">Update Credentials</h4>
+                            <p class="text-muted">Import a new cURL command to replace the existing secrets.</p>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <h4 class="alert-title">No Credentials</h4>
+                                <div class="text-muted">You must import session credentials using a cURL command before this account can post.</div>
+                            </div>
+                        {% endif %}
+
+                        <form action="{% url 'core:account_import' account.pk %}" method="post">
+                            {% csrf_token %}
+                            {% if curl_form.non_field_errors %}
+                            <div class="alert alert-danger">{{ curl_form.non_field_errors }}</div>
+                            {% endif %}
+                            
+                            <div class="mb-3">
+                                <label class="form-label">cURL Import</label>
+                                {{ curl_form.curl_text }}
+                                {% if curl_form.curl_text.errors %}<div class="text-danger mt-1">{{ curl_form.curl_text.errors }}</div>{% endif %}
+                                <div class="form-hint mt-2">{{ curl_form.curl_text.help_text }}</div>
+                            </div>
+                            
+                            <div>
+                                <button type="submit" class="btn btn-primary">Extract and Save Secrets</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right col: Information -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Configuration</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="datagrid">
+                            <div class="datagrid-item">
+                                <div class="datagrid-title">Internal Name</div>
+                                <div class="datagrid-content">{{ account.name }}</div>
+                            </div>
+                            <div class="datagrid-item">
+                                <div class="datagrid-title">Status</div>
+                                <div class="datagrid-content">
+                                    {% if account.is_active %}
+                                        <span class="status status-green">Active</span>
+                                    {% else %}
+                                        <span class="status status-secondary">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="datagrid-item">
+                                <div class="datagrid-title">Notification Mode</div>
+                                <div class="datagrid-content">{{ account.get_notification_mode_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

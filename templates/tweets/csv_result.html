@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Import Results - {{ target_list.name }}{% endblock %}
+
+{% block page_title %}Import Results{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Results for {{ target_list.name }}</h3>
+  </div>
+  <div class="card-body">
+    <div class="row text-center mb-4">
+      <div class="col">
+        <div class="h1 mb-0">{{ total_processed }}</div>
+        <div class="text-secondary">Rows Processed</div>
+      </div>
+      <div class="col">
+        <div class="h1 mb-0 text-success">{{ imported_count }}</div>
+        <div class="text-secondary">Successfully Imported</div>
+      </div>
+      <div class="col">
+        <div class="h1 mb-0 {% if rejected|length > 0 %}text-danger{% else %}text-success{% endif %}">{{ rejected|length }}</div>
+        <div class="text-secondary">Rejected</div>
+      </div>
+    </div>
+    
+    {% if rejected %}
+    <h3>Rejected Rows</h3>
+    <div class="table-responsive">
+      <table class="table table-vcenter">
+        <thead>
+          <tr>
+            <th>Row</th>
+            <th>Content</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in rejected %}
+          <tr>
+            <td>{{ item.row_number }}</td>
+            <td class="text-truncate" style="max-width: 300px;" title="{{ item.text }}">{{ item.text }}</td>
+            <td class="text-danger">{{ item.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card-footer text-end">
+    <a href="{% url 'core:tweet_list_detail' target_list.pk %}" class="btn btn-primary">Back to List</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard | Twitter Bot</title>
+</head>
+<body>
+    <header>
+        <h1>Dashboard</h1>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+    </header>
+    <main>
+        <p>Welcome, {{ request.user.username }}!</p>
+    </main>
+</body>
+</html>

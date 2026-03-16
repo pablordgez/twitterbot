@@ -53,7 +53,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
+    'core.middleware.security.SecurityHeadersMiddleware',
+    'core.middleware.setup.FirstRunMiddleware',
 ]
+
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 ROOT_URLCONF = 'twitterbot.urls'
 
@@ -79,7 +83,9 @@ WSGI_APPLICATION = 'twitterbot.wsgi.application'
 # SQLite at /app/data/db.sqlite3 per requirements
 # Using BASE_DIR / 'data' / 'db.sqlite3' for local development as well if /app doesn't exist
 DB_PATH = os.environ.get('DB_PATH', str(BASE_DIR / 'data' / 'db.sqlite3'))
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
 
 DATABASES = {
     'default': {
@@ -132,6 +138,11 @@ STORAGES = {
     },
 }
 
+import sys
+if 'test' in sys.argv:
+    STORAGES["staticfiles"]["BACKEND"] = "django.contrib.staticfiles.storage.StaticFilesStorage"
+    WHITENOISE_MANIFEST_STRICT = False
+
 # --- Security Settings ---
 
 CSRF_COOKIE_HTTPONLY = True
@@ -153,7 +164,6 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
 
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=15)
-AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
 
 # --- Tweet Settings ---
 
@@ -161,3 +171,8 @@ TWEET_MIN_LENGTH = int(os.environ.get('TWEET_MIN_LENGTH', 1))
 TWEET_MAX_LENGTH = int(os.environ.get('TWEET_MAX_LENGTH', 280))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'core:dashboard'
+LOGOUT_REDIRECT_URL = 'core:login'
+

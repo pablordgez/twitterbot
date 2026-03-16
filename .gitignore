@@ -1,2 +1,13 @@
+# Python caches
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Prompts
+.prompts/
 prompts/
+
+# Other
 docs/plan
+test_output.txt
+*.log

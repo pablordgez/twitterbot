@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-xl">
+    <div class="page-header d-print-none">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    {% if object %}Edit Account: {{ object.name }}{% else %}New Account{% endif %}
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <a href="{% url 'core:account_list' %}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div class="row">
+            <div class="col-md-6">
+                <form action="" method="post" class="card">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label required">Account Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger mt-1">{{ form.name.errors }}</div>{% endif %}
+                            <small class="form-hint">Internal reference name for this account.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notification Mode</label>
+                            {{ form.notification_mode }}
+                            {% if form.notification_mode.errors %}<div class="text-danger mt-1">{{ form.notification_mode.errors }}</div>{% endif %}
+                            <small class="form-hint">When should we email you about posting issues on this account?</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-check">
+                                {{ form.is_active }}
+                                <span class="form-check-label">Active</span>
+                                <span class="form-check-description">Inactive accounts will skip their schedules.</span>
+                            </label>
+                            {% if form.is_active.errors %}<div class="text-danger mt-1">{{ form.is_active.errors }}</div>{% endif %}
+                        </div>
+
+                    </div>
+                    <div class="card-footer text-end">
+                        <button type="submit" class="btn btn-primary">Save Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

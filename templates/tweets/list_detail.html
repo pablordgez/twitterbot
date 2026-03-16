@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tweet_list.name }} - Tweet List{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Tweet List: {{ tweet_list.name }}
+                </h2>
+                <div class="text-muted mt-1">
+                    {{ entries.count }} entries
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <a href="{% url 'core:tweet_list_update' tweet_list.pk %}" class="btn btn-primary d-none d-sm-inline-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+                        Edit List
+                    </a>
+                    <a href="{% url 'core:tweet_list_list' %}" class="btn btn-link">
+                        Back to Index
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Add New Entry</h3>
+                    </div>
+                    <div class="card-body">
+                        <form hx-post="{% url 'core:tweet_entry_create' tweet_list.pk %}" 
+                              hx-target="#entries-tbody" 
+                              hx-swap="afterbegin"
+                              hx-on::after-request="this.reset()">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                {{ form.text }}
+                                {% if form.text.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.text.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-footer">
+                                <button type="submit" class="btn btn-primary">Add Entry</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-vcenter table-mobile-md card-table">
+                            <thead>
+                                <tr>
+                                    <th>Content</th>
+                                    <th>Created</th>
+                                    <th class="w-1"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="entries-tbody">
+                                {% for entry in entries %}
+                                    {% include "tweets/entry_row.html" %}
+                                {% empty %}
+                                <tr id="no-entries">
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        No entries found in this list.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if is_paginated %}
+                    <div class="card-footer d-flex align-items-center">
+                        <p class="m-0 text-muted">Showing <span>{{ page_obj.start_index }}</span> to <span>{{ page_obj.end_index }}</span> of <span>{{ paginator.count }}</span> entries</p>
+                        <ul class="pagination m-0 ms-auto">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" /></svg>
+                                    prev
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                    next
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
