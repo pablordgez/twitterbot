@@ -8,10 +8,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>Twitter Bot</title>
     <!-- CSS files -->
-    <link href="{% static 'vendor/tabler/css/tabler.min.css' %}" rel="stylesheet"/>
-    <link href="{% static 'vendor/tabler/css/tabler-flags.min.css' %}" rel="stylesheet"/>
-    <link href="{% static 'vendor/tabler/css/tabler-payments.min.css' %}" rel="stylesheet"/>
-    <link href="{% static 'vendor/tabler/css/tabler-vendors.min.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/tabler/tabler.min.css' %}" rel="stylesheet"/>
     <link href="{% static 'css/custom.css' %}" rel="stylesheet"/>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <style>
@@ -25,7 +22,7 @@
     </style>
   </head>
   <body class="layout-fluid">
-    <script src="{% static 'vendor/tabler/js/demo-theme.min.js' %}"></script>
+    <script src="{% static 'vendor/tabler/tabler.min.js' %}"></script>
     <div class="page">
       <!-- Sidebar / Topbar depending on preference, Tabler usually uses a topbar or sidebar -->
       <header class="navbar navbar-expand-md d-print-none" >
@@ -47,7 +44,7 @@
                 </div>
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                <form action="{% url 'logout' %}" method="post">
+                <form action="{% url 'core:logout' %}" method="post">
                     {% csrf_token %}
                     <button type="submit" class="dropdown-item">Logout</button>
                 </form>
@@ -63,17 +60,16 @@
             <div class="container-xl">
               <ul class="navbar-nav">
                 <li class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                  <a class="nav-link" href="/">
+                  <a class="nav-link" href="{% url 'core:dashboard' %}">
                     <span class="nav-link-title">Dashboard</span>
                   </a>
                 </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="#">
+                  <a class="nav-link" href="{% url 'core:account_list' %}">
                     <span class="nav-link-title">Accounts</span>
                   </a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" href="#">
+                  <a class="nav-link" href="{% url 'core:tweet_list_list' %}">
                     <span class="nav-link-title">Tweet Lists</span>
                   </a>
                 </li>
@@ -149,8 +145,7 @@
     <!-- Modals -->
     {% include 'partials/confirm_modal.html' %}
 
-    <script src="{% static 'vendor/tabler/js/tabler.min.js' %}" defer></script>
-    <script src="{% static 'vendor/tabler/js/demo.min.js' %}" defer></script>
+    <script src="{% static 'vendor/tabler/tabler.min.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
   </body>
 </html>

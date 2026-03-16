@@ -10,3 +10,4 @@ prompts/
 # Other
 docs/plan
 test_output.txt
+*.log

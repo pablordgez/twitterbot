@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-xl">
+    <div class="page-header d-print-none">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">Tweet Lists</h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <a href="{% url 'core:tweet_list_create' %}" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    New List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Entry Count</th>
+                            <th>Added</th>
+                            <th class="w-1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for list in tweet_lists %}
+                        <tr>
+                            <td>
+                                <a href="#">{{ list.name }}</a>
+                            </td>
+                            <td class="text-muted">{{ list.entry_count }}</td>
+                            <td class="text-muted">{{ list.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="text-end text-nowrap">
+                                <a href="{% url 'core:tweet_list_update' list.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                <a href="{% url 'core:tweet_list_delete' list.pk %}" class="btn btn-sm btn-outline-danger ms-2">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">No tweet lists added yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

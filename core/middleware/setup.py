@@ -9,13 +9,13 @@ class FirstRunMiddleware:
     def __call__(self, request):
         # Exclude setup view, static files, and health check from redirection
         excluded_paths = [
-            reverse('setup'),
+            reverse('core:setup'),
             '/static/',
             reverse('health_check'),
         ]
         
         if not any(request.path.startswith(path) for path in excluded_paths):
             if not User.objects.exists():
-                return redirect('setup')
+                return redirect('core:setup')
         
         return self.get_response(request)

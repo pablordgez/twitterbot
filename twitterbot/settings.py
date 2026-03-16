@@ -83,7 +83,9 @@ WSGI_APPLICATION = 'twitterbot.wsgi.application'
 # SQLite at /app/data/db.sqlite3 per requirements
 # Using BASE_DIR / 'data' / 'db.sqlite3' for local development as well if /app doesn't exist
 DB_PATH = os.environ.get('DB_PATH', str(BASE_DIR / 'data' / 'db.sqlite3'))
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
 
 DATABASES = {
     'default': {
@@ -136,6 +138,11 @@ STORAGES = {
     },
 }
 
+import sys
+if 'test' in sys.argv:
+    STORAGES["staticfiles"]["BACKEND"] = "django.contrib.staticfiles.storage.StaticFilesStorage"
+    WHITENOISE_MANIFEST_STRICT = False
+
 # --- Security Settings ---
 
 CSRF_COOKIE_HTTPONLY = True
@@ -165,7 +172,7 @@ TWEET_MAX_LENGTH = int(os.environ.get('TWEET_MAX_LENGTH', 280))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'core:dashboard'
+LOGOUT_REDIRECT_URL = 'core:login'
 

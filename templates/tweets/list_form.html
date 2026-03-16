@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-xl">
+    <div class="page-header d-print-none">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    {% if object %}Edit{% else %}New{% endif %} Tweet List
+                </h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form method="post" class="card">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label required">List Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.name.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer text-end">
+                        <div class="d-flex">
+                            <a href="{% url 'core:tweet_list_list' %}" class="btn btn-link">Cancel</a>
+                            <button type="submit" class="btn btn-primary ms-auto">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

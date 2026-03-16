@@ -1,0 +1,67 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy, reverse
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
+from django.db.models import Count
+
+from ..models.tweets import TweetList
+from ..models.schedules import ScheduleSourceList
+from ..forms.tweet_lists import TweetListForm
+
+class TweetListListView(LoginRequiredMixin, ListView):
+    model = TweetList
+    template_name = 'tweets/list_index.html'
+    context_object_name = 'tweet_lists'
+    
+    def get_queryset(self):
+        return TweetList.objects.annotate(entry_count=Count('entries')).order_by('-created_at')
+
+class TweetListCreateView(LoginRequiredMixin, CreateView):
+    model = TweetList
+    form_class = TweetListForm
+    template_name = 'tweets/list_form.html'
+    success_url = reverse_lazy('core:tweet_list_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Tweet list created successfully.")
+        return super().form_valid(form)
+
+class TweetListUpdateView(LoginRequiredMixin, UpdateView):
+    model = TweetList
+    form_class = TweetListForm
+    template_name = 'tweets/list_form.html'
+    success_url = reverse_lazy('core:tweet_list_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Tweet list updated successfully.")
+        return super().form_valid(form)
+
+class TweetListDeleteView(LoginRequiredMixin, DeleteView):
+    model = TweetList
+    template_name = 'tweets/list_delete_confirm.html'
+    success_url = reverse_lazy('core:tweet_list_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check dependencies: schedules using this list
+        active_schedules = [
+            ssl.schedule for ssl in ScheduleSourceList.objects.filter(tweet_list=self.object)
+            if ssl.schedule.status == 'active'
+        ]
+        context['affected_schedules'] = active_schedules
+        return context
+
+    def form_valid(self, form):
+        # Cancel affected schedules
+        active_schedules = [
+            ssl.schedule for ssl in ScheduleSourceList.objects.filter(tweet_list=self.object)
+            if ssl.schedule.status == 'active'
+        ]
+        with transaction.atomic():
+            for schedule in active_schedules:
+                schedule.status = 'canceled'
+                schedule.save(update_fields=['status'])
+            messages.success(self.request, "Tweet list deleted and linked schedules canceled.")
+            return super().form_valid(form)
