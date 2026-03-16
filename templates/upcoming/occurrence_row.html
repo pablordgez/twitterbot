@@ -4,7 +4,7 @@
         <div class="text-secondary">{{ occurrence.display_timezone }}</div>
     </td>
     <td>
-        <div><a href="{% url 'core:schedule_detail' occurrence.schedule.pk %}">{{ occurrence.schedule.name }}</a></div>
+        <div><a href="{% url 'core:schedule_detail' occurrence.schedule.pk %}">{{ occurrence.schedule.get_schedule_type_display }} #{{ occurrence.schedule.pk }}</a></div>
         <div class="text-secondary"><span class="badge bg-blue-lt">{{ occurrence.schedule.get_schedule_type_display }}</span></div>
     </td>
     <td>
@@ -29,6 +29,15 @@
     </td>
     <td><span class="status status-yellow">{{ occurrence.get_status_display }}</span></td>
     <td>
-        <!-- Cancellation will be added in T-016 -->
+        {% if occurrence.status == 'pending' %}
+        <button class="btn btn-sm btn-outline-danger" 
+                data-bs-toggle="modal" 
+                data-bs-target="#modal-confirm"
+                data-confirm-url="{% url 'core:occurrence_cancel' occurrence.pk %}"
+                data-confirm-title="Cancel Occurrence"
+                data-confirm-body="Are you sure you want to cancel this occurrence scheduled for {{ occurrence.due_at|date:'Y-m-d H:i' }}?">
+            Cancel
+        </button>
+        {% endif %}
     </td>
 </tr>

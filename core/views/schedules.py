@@ -10,6 +10,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
@@ -150,13 +151,30 @@ class ScheduleDetailView(LoginRequiredMixin, DetailView):
 
 
 class ScheduleCancelView(LoginRequiredMixin, View):
-    """POST-only: cancel a schedule."""
+    """POST-only: cancel a schedule and all future occurrences."""
 
     def post(self, request, pk):
         schedule = get_object_or_404(Schedule, pk=pk)
-        schedule.status = 'canceled'
-        schedule.save(update_fields=['status', 'updated_at'])
-        messages.success(request, 'Schedule canceled.')
+        
+        with transaction.atomic():
+            # 1. Update schedule status
+            schedule.status = 'canceled'
+            schedule.save(update_fields=['status', 'updated_at'])
+            
+            # 2. Bulk cancel all pending occurrences
+            schedule.occurrences.filter(status='pending').update(
+                status='canceled',
+                cancel_reason='schedule_canceled',
+                updated_at=timezone.now()
+            )
+            
+            # 3. Log audit event
+            HistoryEvent.objects.create(
+                event_type='SCHEDULE_CANCELED',
+                schedule=schedule,
+            )
+            
+        messages.success(request, 'Schedule and all future occurrences canceled.')
         return redirect('core:schedule_list')
 
 
