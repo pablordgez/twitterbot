@@ -17,6 +17,7 @@ from core.forms.schedules import ScheduleForm
 from core.models.accounts import PostingAccount
 from core.models.schedules import Schedule, ScheduleSourceList, ScheduleTargetAccount
 from core.models.tweets import TweetList
+from core.models.history import HistoryEvent
 from core.services.schedule_logic import increment_version
 from core.services.occurrence_materializer import materialize_for_schedule
 
@@ -116,6 +117,12 @@ class ScheduleUpdateView(LoginRequiredMixin, UpdateView):
 
             # Regenerate future occurrences
             materialize_for_schedule(self.object)
+
+            # Audit log
+            HistoryEvent.objects.create(
+                event_type='SCHEDULE_EDITED',
+                schedule=self.object,
+            )
 
         messages.success(self.request, 'Schedule updated successfully.')
         return redirect(self.get_success_url())
