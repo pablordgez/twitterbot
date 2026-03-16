@@ -1,0 +1,11 @@
+{% if affected_schedules %}
+<div class="alert alert-danger mt-4">
+    <h4 class="alert-title">Warning: Dependency Impact</h4>
+    <div class="text-muted mb-3">Deleting this item will automatically cancel the following active schedules and all their pending occurrences:</div>
+    <ul>
+        {% for schedule in affected_schedules %}
+            <li>Schedule ID #{{ schedule.id }} (Type: {{ schedule.get_schedule_type_display }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
