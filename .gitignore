@@ -9,5 +9,5 @@ prompts/
 
 # Other
 docs/plan
-test_output.txt
+test_*.txt
 *.log

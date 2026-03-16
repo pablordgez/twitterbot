@@ -9,10 +9,10 @@ import json
 import hashlib
 
 from core.models.accounts import PostingAccount, PostingAccountSecret
-from core.models.schedules import ScheduleTargetAccount
 from core.models.history import HistoryEvent
 from core.forms.accounts import PostingAccountForm, CurlImportForm
 from core.services.encryption import encrypt, mask_value
+from core.services.dependency_cascade import check_account_dependencies, cascade_cancel
 
 class AccountListView(LoginRequiredMixin, ListView):
     model = PostingAccount
@@ -128,22 +128,17 @@ class AccountDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Check dependencies
-        active_schedules = [
-            sta.schedule for sta in ScheduleTargetAccount.objects.filter(account=self.object)
-            if sta.schedule.status == 'active'
-        ]
-        context['affected_schedules'] = active_schedules
+        context['affected_schedules'] = check_account_dependencies(self.object)
         return context
 
     def form_valid(self, form):
-        # Cancel affected schedules
-        active_schedules = [
-            sta.schedule for sta in ScheduleTargetAccount.objects.filter(account=self.object)
-            if sta.schedule.status == 'active'
-        ]
+        affected = check_account_dependencies(self.object)
         with transaction.atomic():
-            for schedule in active_schedules:
-                schedule.status = 'canceled'
-                schedule.save(update_fields=['status'])
+            if affected:
+                cascade_cancel(affected, 'account_deleted')
+            HistoryEvent.objects.create(
+                event_type='DEPENDENCY_DELETE_CONFIRMED',
+                account=self.object,
+                detail={'deleted': 'account', 'name': self.object.name},
+            )
             return super().form_valid(form)

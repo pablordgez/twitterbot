@@ -1,0 +1,43 @@
+<tr>
+    <td>
+        <div>{{ occurrence.due_at|date:"Y-m-d H:i" }}</div>
+        <div class="text-secondary">{{ occurrence.display_timezone }}</div>
+    </td>
+    <td>
+        <div><a href="{% url 'core:schedule_detail' occurrence.schedule.pk %}">{{ occurrence.schedule.get_schedule_type_display }} #{{ occurrence.schedule.pk }}</a></div>
+        <div class="text-secondary"><span class="badge bg-blue-lt">{{ occurrence.schedule.get_schedule_type_display }}</span></div>
+    </td>
+    <td>
+        {% for target in occurrence.schedule.target_accounts.all %}
+            <span class="badge bg-purple-lt">{{ target.account.name }}</span><br/>
+        {% empty %}
+            <span class="text-secondary">None</span>
+        {% endfor %}
+    </td>
+    <td class="text-truncate" style="max-width: 250px;">
+        {% if occurrence.schedule.content_mode == 'fixed_new' or occurrence.schedule.content_mode == 'fixed_from_list' %}
+            {{ occurrence.schedule.fixed_content }}
+        {% elif occurrence.schedule.content_mode == 'random_from_list' %}
+            <span class="text-secondary">Random from: {{ occurrence.schedule.source_lists.first.tweet_list.name }}</span>
+        {% elif occurrence.schedule.content_mode == 'random_from_lists' %}
+            <span class="text-secondary">Random from multiple lists</span>
+        {% elif occurrence.schedule.content_mode == 'random_from_query' %}
+            <span class="text-secondary">Random from query</span>
+        {% else %}
+            <span class="text-secondary">Unknown</span>
+        {% endif %}
+    </td>
+    <td><span class="status status-yellow">{{ occurrence.get_status_display }}</span></td>
+    <td>
+        {% if occurrence.status == 'pending' %}
+        <button class="btn btn-sm btn-outline-danger" 
+                data-bs-toggle="modal" 
+                data-bs-target="#modal-confirm"
+                data-confirm-url="{% url 'core:occurrence_cancel' occurrence.pk %}"
+                data-confirm-title="Cancel Occurrence"
+                data-confirm-body="Are you sure you want to cancel this occurrence scheduled for {{ occurrence.due_at|date:'Y-m-d H:i' }}?">
+            Cancel
+        </button>
+        {% endif %}
+    </td>
+</tr>

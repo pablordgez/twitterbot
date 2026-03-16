@@ -8,8 +8,10 @@ from django.db.models import Count
 
 from ..models.tweets import TweetList, TweetEntry
 from ..models.schedules import ScheduleSourceList
+from ..models.history import HistoryEvent
 from ..forms.tweet_lists import TweetListForm
 from ..forms.tweet_entries import TweetEntryForm
+from ..services.dependency_cascade import check_list_dependencies, cascade_cancel
 
 class TweetListListView(LoginRequiredMixin, ListView):
     model = TweetList
@@ -46,24 +48,18 @@ class TweetListDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Check dependencies: schedules using this list
-        active_schedules = [
-            ssl.schedule for ssl in ScheduleSourceList.objects.filter(tweet_list=self.object)
-            if ssl.schedule.status == 'active'
-        ]
-        context['affected_schedules'] = active_schedules
+        context['affected_schedules'] = check_list_dependencies(self.object)
         return context
 
     def form_valid(self, form):
-        # Cancel affected schedules
-        active_schedules = [
-            ssl.schedule for ssl in ScheduleSourceList.objects.filter(tweet_list=self.object)
-            if ssl.schedule.status == 'active'
-        ]
+        affected = check_list_dependencies(self.object)
         with transaction.atomic():
-            for schedule in active_schedules:
-                schedule.status = 'canceled'
-                schedule.save(update_fields=['status'])
+            if affected:
+                cascade_cancel(affected, 'list_deleted')
+            HistoryEvent.objects.create(
+                event_type='DEPENDENCY_DELETE_CONFIRMED',
+                detail={'deleted': 'tweet_list', 'name': self.object.name},
+            )
             messages.success(self.request, "Tweet list deleted and linked schedules canceled.")
             return super().form_valid(form)
 
