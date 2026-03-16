@@ -7,7 +7,10 @@ from .views.accounts import (
     AccountDetailView, AccountDeleteView, AccountCurlImportView, AccountTestPostView
 )
 from .views.tweet_lists import (
-    TweetListListView, TweetListCreateView, TweetListUpdateView, TweetListDeleteView
+    TweetListListView, TweetListCreateView, TweetListUpdateView, TweetListDeleteView, TweetListDetailView
+)
+from .views.tweet_entries import (
+    TweetEntryCreateView, TweetEntryUpdateView, TweetEntryDeleteView
 )
 app_name = 'core'
 
@@ -27,6 +30,11 @@ urlpatterns = [
 
     path('tweet-lists/', TweetListListView.as_view(), name='tweet_list_list'),
     path('tweet-lists/create/', TweetListCreateView.as_view(), name='tweet_list_create'),
+    path('tweet-lists/<int:pk>/', TweetListDetailView.as_view(), name='tweet_list_detail'),
     path('tweet-lists/<int:pk>/edit/', TweetListUpdateView.as_view(), name='tweet_list_update'),
     path('tweet-lists/<int:pk>/delete/', TweetListDeleteView.as_view(), name='tweet_list_delete'),
+
+    path('tweet-lists/<int:list_pk>/entries/create/', TweetEntryCreateView.as_view(), name='tweet_entry_create'),
+    path('tweet-entries/<int:pk>/edit/', TweetEntryUpdateView.as_view(), name='tweet_entry_update'),
+    path('tweet-entries/<int:pk>/delete/', TweetEntryDeleteView.as_view(), name='tweet_entry_delete'),
 ]

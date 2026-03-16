@@ -6,9 +6,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Count
 
-from ..models.tweets import TweetList
+from ..models.tweets import TweetList, TweetEntry
 from ..models.schedules import ScheduleSourceList
 from ..forms.tweet_lists import TweetListForm
+from ..forms.tweet_entries import TweetEntryForm
 
 class TweetListListView(LoginRequiredMixin, ListView):
     model = TweetList
@@ -65,3 +66,19 @@ class TweetListDeleteView(LoginRequiredMixin, DeleteView):
                 schedule.save(update_fields=['status'])
             messages.success(self.request, "Tweet list deleted and linked schedules canceled.")
             return super().form_valid(form)
+
+class TweetListDetailView(LoginRequiredMixin, ListView):
+    model = TweetEntry
+    template_name = 'tweets/list_detail.html'
+    context_object_name = 'entries'
+    paginate_by = 50
+
+    def get_queryset(self):
+        self.tweet_list = get_object_or_404(TweetList, pk=self.kwargs['pk'])
+        return TweetEntry.objects.filter(list=self.tweet_list).order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tweet_list'] = self.tweet_list
+        context['form'] = TweetEntryForm()
+        return context
