@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block page_title %}Upcoming Occurrences{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body border-bottom">
+        <h3 class="card-title">Pending Occurrences</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter text-nowrap datatable">
+            <thead>
+                <tr>
+                    <th>Due Time</th>
+                    <th>Schedule</th>
+                    <th>Target</th>
+                    <th>Content</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for occurrence in object_list %}
+                    {% include 'upcoming/occurrence_row.html' with occurrence=occurrence %}
+                {% empty %}
+                    <tr><td colspan="6" class="text-center">No upcoming occurrences found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if is_paginated %}
+    <div class="card-footer d-flex align-items-center">
+        <!-- Pagination controls -->
+        <p class="m-0 text-secondary">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </p>
+        <ul class="pagination m-0 ms-auto">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

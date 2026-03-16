@@ -18,6 +18,7 @@ from .views.schedules import (
     ScheduleDetailView, ScheduleCancelView,
     RecurringFieldsPartialView, ContentModePartialView,
 )
+from .views.upcoming import UpcomingListView
 app_name = 'core'
 
 urlpatterns = [
@@ -53,4 +54,6 @@ urlpatterns = [
     path('schedules/<int:pk>/cancel/', ScheduleCancelView.as_view(), name='schedule_cancel'),
     path('schedules/partials/recurring-fields/', RecurringFieldsPartialView.as_view(), name='schedule_recurring_partial'),
     path('schedules/partials/content-mode/', ContentModePartialView.as_view(), name='schedule_content_mode_partial'),
+
+    path('upcoming/', UpcomingListView.as_view(), name='upcoming_list'),
 ]
