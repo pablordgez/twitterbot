@@ -1,0 +1,7 @@
+django==5.2a1
+waitress
+whitenoise
+cryptography
+django-axes
+requests
+gunicorn
