@@ -8,6 +8,7 @@ from core.models.accounts import PostingAccount, PostingAccountSecret
 from core.models.execution import OccurrenceAttempt, Occurrence
 from core.models.history import HistoryEvent
 from core.services.encryption import decrypt
+from core.services.content_resolver import resolve_content_for_occurrence
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,48 @@ FEATURES_PAYLOAD = {
     "responsive_web_graphql_timeline_navigation_enabled": True,
     "responsive_web_enhance_cards_enabled": False
 }
+
+def execute_occurrence_attempts(occurrence_id: int):
+    """
+    Executes all attempts for a given occurrence.
+    Resolves content before executing attempts.
+    """
+    try:
+        occurrence = Occurrence.objects.get(id=occurrence_id)
+    except Occurrence.DoesNotExist:
+        logger.error(f"Occurrence {occurrence_id} not found.")
+        return
+
+    # Resolve content
+    if not occurrence.content_resolved:
+        resolve_content_for_occurrence(occurrence)
+
+    # Execute attempts
+    attempts = occurrence.attempts.all()
+    all_success = True
+    any_success = False
+
+    for attempt in attempts:
+        try:
+            execute_attempt(attempt)
+            attempt.refresh_from_db()
+            if attempt.post_result == OccurrenceAttempt.PostResult.SUCCESS:
+                any_success = True
+            else:
+                all_success = False
+        except Exception as e:
+            logger.error(f"Error executing attempt {attempt.id}: {e}")
+            all_success = False
+
+    # Finalize status
+    if all_success and attempts.exists():
+        occurrence.status = Occurrence.Status.COMPLETED
+    elif any_success:
+        occurrence.status = Occurrence.Status.COMPLETED
+    else:
+        occurrence.status = Occurrence.Status.FAILED
+
+    occurrence.save(update_fields=['status'])
 
 def execute_attempt(attempt: OccurrenceAttempt):
     """
