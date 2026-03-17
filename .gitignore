@@ -17,6 +17,8 @@ share/
 .prompts/
 
 # Other
+.gemini/
 docs/plan
 test_*.txt
 *.log
+.env

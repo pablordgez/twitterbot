@@ -13,7 +13,7 @@ from core.services.posting_executor import execute_occurrence_attempts
 logger = logging.getLogger(__name__)
 
 LEASE_DURATION_SECONDS = 30
-GRACE_PERIOD_MINUTES = 5
+GRACE_PERIOD_MINUTES = 1
 
 def acquire_or_renew_lease(owner_id: str) -> bool:
     now = timezone.now()

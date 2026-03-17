@@ -66,7 +66,7 @@ class SchedulerTests(TestCase):
             status=Occurrence.Status.PENDING
         )
         
-        # This one is pending but within grace period
+        # This one should now be missed (due 2 minutes ago, grace is 1 minute)
         occ2 = Occurrence.objects.create(
             schedule=self.schedule,
             due_at=now - timedelta(minutes=2),
@@ -75,17 +75,29 @@ class SchedulerTests(TestCase):
             status=Occurrence.Status.PENDING
         )
         
+        # This one is pending and within 1-minute grace period
+        occ3 = Occurrence.objects.create(
+            schedule=self.schedule,
+            due_at=now - timedelta(seconds=30),
+            display_timezone="UTC",
+            schedule_version=1,
+            status=Occurrence.Status.PENDING
+        )
+        
         count = startup_scan_missed()
-        self.assertEqual(count, 1)
+        self.assertEqual(count, 2)
         
         occ1.refresh_from_db()
         occ2.refresh_from_db()
+        occ3.refresh_from_db()
         
         self.assertEqual(occ1.status, Occurrence.Status.MISSED)
-        self.assertEqual(occ2.status, Occurrence.Status.PENDING)
+        self.assertEqual(occ2.status, Occurrence.Status.MISSED)
+        self.assertEqual(occ3.status, Occurrence.Status.PENDING)
 
     @patch('core.services.scheduler.refresh_rolling_horizon')
-    def test_poll_and_claim_transactional(self, mock_refresh):
+    @patch('core.services.scheduler.execute_occurrence_attempts')
+    def test_poll_and_claim_transactional(self, mock_execute, mock_refresh):
         now = timezone.now()
         
         occ = Occurrence.objects.create(
@@ -96,6 +108,13 @@ class SchedulerTests(TestCase):
             status=Occurrence.Status.PENDING
         )
         
+        # Simulate successful execution by the executor
+        def mock_side_effect(occ_id):
+            o = Occurrence.objects.get(id=occ_id)
+            o.status = Occurrence.Status.COMPLETED
+            o.save()
+        mock_execute.side_effect = mock_side_effect
+
         owner_id = uuid.uuid4().hex
         
         # Tick should find occ, claim it, and create attempts
@@ -103,7 +122,6 @@ class SchedulerTests(TestCase):
         self.assertTrue(success)
         
         occ.refresh_from_db()
-        # Since dummy executor succeeds, it should be COMPLETED
         self.assertEqual(occ.status, Occurrence.Status.COMPLETED)
         
         attempts = OccurrenceAttempt.objects.filter(occurrence=occ)
@@ -113,6 +131,7 @@ class SchedulerTests(TestCase):
         success = execute_scheduler_tick(owner_id)
         self.assertTrue(success)
         mock_refresh.assert_called()
+        mock_execute.assert_called_once_with(occ.id)
 
     @patch('core.services.scheduler.refresh_rolling_horizon')
     def test_duplicate_execution_prevented(self, mock_refresh):
