@@ -10,6 +10,7 @@ from core.models.schedules import Schedule
 from core.models.history import HistoryEvent
 from core.services.encryption import decrypt
 from core.services.content_resolver import resolve_content_for_occurrence
+from core.services.notification_engine import handle_posting_result
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,7 @@ def execute_attempt(attempt: OccurrenceAttempt):
             occurrence=occurrence,
             content_summary=f"Successfully posted for {account.name}"
         )
+        handle_posting_result(account, True, attempt)
     else:
         attempt.post_result = OccurrenceAttempt.PostResult.FAILED
         attempt.error_detail = _redact_error(error_detail)
@@ -148,6 +150,7 @@ def execute_attempt(attempt: OccurrenceAttempt):
             occurrence=occurrence,
             content_summary=f"Failed to post for {account.name}: {attempt.error_detail}"
         )
+        handle_posting_result(account, False, attempt)
 
 def execute_test_post(account: PostingAccount, content: str = 'test') -> tuple[bool, str]:
     """
@@ -248,6 +251,7 @@ def _fail_attempt(attempt: OccurrenceAttempt, result: str, detail: str):
         occurrence=attempt.occurrence,
         content_summary=f"Validation failed: {detail}"
     )
+    handle_posting_result(attempt.target_account, False, attempt)
 
 def _redact_error(error_str: str) -> str:
     """

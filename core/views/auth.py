@@ -11,14 +11,14 @@ logger = logging.getLogger(__name__)
 class SetupView(View):
     def get(self, request):
         if User.objects.exists():
-            return redirect('login')
+            return redirect('core:login')
         from core.forms.auth import SetupForm
         form = SetupForm()
         return render(request, 'auth/setup.html', {'form': form})
 
     def post(self, request):
         if User.objects.exists():
-            return redirect('login')
+            return redirect('core:login')
         
         from core.forms.auth import SetupForm
         form = SetupForm(request.POST)
@@ -30,17 +30,17 @@ class SetupView(View):
                 with transaction.atomic():
                     if User.objects.count() > 0:
                         logger.warning("AUTH_SETUP_BLOCKED: Setup attempted but admin already exists.")
-                        return redirect('login')
+                        return redirect('core:login')
                     
                     user = User.objects.create_superuser(username=username, email='', password=password)
                     logger.info("AUTH_SETUP_COMPLETED: First-run setup completed successfully.")
                     
                     # Log in after setup
                     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                    return redirect('dashboard')
+                    return redirect('core:dashboard')
             except IntegrityError:
                 logger.warning("AUTH_SETUP_BLOCKED: Setup transaction failed.")
-                return redirect('login')
+                return redirect('core:login')
                 
         return render(request, 'auth/setup.html', {'form': form})
 

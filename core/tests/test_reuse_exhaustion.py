@@ -122,14 +122,20 @@ class ReuseExhaustionTests(TestCase):
         # Mock _execute_post to return success
         with patch('core.services.posting_executor._execute_post') as mock_post:
             mock_post.return_value = (True, "", {})
+            from core.models.accounts import PostingAccountSecret
+
             # We also need to mock secret validation to pass
-            with patch('core.services.posting_executor.hasattr') as mock_hasattr:
-                mock_hasattr.return_value = True
-                with patch('core.services.posting_executor.decrypt') as mock_decrypt:
-                    mock_decrypt.return_value = '{}'
-                    execute_attempt(attempt)
-        
+            PostingAccountSecret.objects.create(
+                account=attempt.target_account,
+                encrypted_data=b'abc',
+                field_hash='hash'
+            )
+
+            with patch('core.services.posting_executor.decrypt') as mock_decrypt:
+                mock_decrypt.return_value = '{"queryId": "123"}'
+                execute_attempt(attempt)        
         attempt.refresh_from_db()
+        print(f"Error detail: {attempt.error_detail}")
         self.assertEqual(attempt.post_result, OccurrenceAttempt.PostResult.SUCCESS)
         
         # Verify usage state was created
