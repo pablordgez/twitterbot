@@ -1,2 +1,4 @@
-!codex-prompts/
+!.prompts/
 !docs/plan
+!.gemini/
+!.env

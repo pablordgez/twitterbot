@@ -3,11 +3,22 @@
 *.py[cod]
 *$py.class
 
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+bin/
+lib/
+include/
+share/
+
 # Prompts
 .prompts/
-prompts/
 
 # Other
+.gemini/
 docs/plan
 test_*.txt
 *.log
+.env

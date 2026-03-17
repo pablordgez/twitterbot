@@ -14,6 +14,10 @@ class TweetEntryForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        self.tweet_list = kwargs.pop('tweet_list', None)
+        super().__init__(*args, **kwargs)
+
     def clean_text(self):
         text = self.cleaned_data.get('text')
         validate_tweet_length(text)

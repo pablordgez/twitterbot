@@ -80,13 +80,16 @@ class TweetEntryDeleteView(LoginRequiredMixin, DeleteView):
     def get_success_url(self):
         return reverse('core:tweet_list_detail', kwargs={'pk': self.object.list.pk})
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         self.object = self.get_object()
         list_pk = self.object.list.pk
+        
+        success_url = self.get_success_url()
         self.object.delete()
         
-        if request.headers.get('HX-Request'):
+        if self.request.headers.get('HX-Request'):
             return HttpResponse("") # Empty response removes the item in HTMX
             
-        messages.success(request, "Entry deleted.")
-        return redirect(reverse('core:tweet_list_detail', kwargs={'pk': list_pk}))
+        messages.success(self.request, "Entry deleted.")
+        from django.shortcuts import redirect
+        return redirect(success_url)

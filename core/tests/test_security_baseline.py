@@ -19,9 +19,11 @@ class SecurityBaselineTest(TestCase):
 
     def test_csrf_enforced_on_post(self):
         """Verify that POST requests without CSRF token are rejected."""
-        # Django's CsrfViewMiddleware should catch this before FirstRunMiddleware
-        # if registered correctly.
-        response = self.client.post(reverse('login'), data={'username': 'admin', 'password': 'password'})
+        from django.contrib.auth.models import User
+        User.objects.create_superuser('admin', '', 'password')
+        
+        csrf_client = Client(enforce_csrf_checks=True)
+        response = csrf_client.post(reverse('core:login'), data={'username': 'admin', 'password': 'password'})
         self.assertEqual(response.status_code, 403)
 
     def test_request_body_size_limit(self):
@@ -39,7 +41,7 @@ class SecurityBaselineTest(TestCase):
         """Verify that unauthenticated access to dashboard redirects to login."""
         # The dashboard URL should exist if T-003 was partially done or T-002
         try:
-            url = reverse('dashboard')
+            url = reverse('core:dashboard')
             response = self.client.get(url)
             self.assertIn(response.status_code, [302, 403])
         except:
