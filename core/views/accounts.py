@@ -7,9 +7,10 @@ from django.views import View
 from django.db import transaction
 import json
 import hashlib
+from uuid import uuid4
 
 from core.models.accounts import PostingAccount, PostingAccountSecret
-from core.models.history import HistoryEvent
+from core.services.history import log_event
 from core.forms.accounts import PostingAccountForm, CurlImportForm
 from core.services.encryption import encrypt, mask_value
 from core.services.dependency_cascade import check_account_dependencies, cascade_cancel
@@ -27,8 +28,14 @@ class AccountCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('core:account_list')
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        log_event(
+            event_type='ACCOUNT_CREATED',
+            account=self.object,
+            result_status='success',
+        )
         messages.success(self.request, "Account created successfully.")
-        return super().form_valid(form)
+        return response
 
 class AccountUpdateView(LoginRequiredMixin, UpdateView):
     model = PostingAccount
@@ -39,8 +46,14 @@ class AccountUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('core:account_detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        log_event(
+            event_type='ACCOUNT_UPDATED',
+            account=self.object,
+            result_status='success',
+        )
         messages.success(self.request, "Account updated successfully.")
-        return super().form_valid(form)
+        return response
 
 class AccountDetailView(LoginRequiredMixin, DetailView):
     model = PostingAccount
@@ -78,7 +91,7 @@ class AccountCurlImportView(LoginRequiredMixin, View):
                         'field_hash': field_hash
                     }
                 )
-                HistoryEvent.objects.create(
+                log_event(
                     event_type='ACCOUNT_SECRET_REPLACED' if is_replacement else 'ACCOUNT_IMPORT_ACCEPTED',
                     account=account,
                     content_summary='cURL data imported'
@@ -88,7 +101,7 @@ class AccountCurlImportView(LoginRequiredMixin, View):
             return redirect('core:account_detail', pk=pk)
 
         else:
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='ACCOUNT_IMPORT_REJECTED',
                 account=account,
                 content_summary='cURL data import failed validation'
@@ -103,16 +116,26 @@ class AccountCurlImportView(LoginRequiredMixin, View):
 class AccountTestPostView(LoginRequiredMixin, View):
     def post(self, request, pk):
         account = get_object_or_404(PostingAccount, pk=pk)
+        correlation_id = uuid4().hex
+
+        log_event(
+            event_type='TEST_POST_CONFIRMED',
+            account=account,
+            content_summary='test',
+            result_status='confirmed',
+            correlation_id=correlation_id,
+        )
         
         from core.services.posting_executor import execute_test_post
         success, error_detail = execute_test_post(account, content='test')
         
-        HistoryEvent.objects.create(
-            event_type='TEST_POST_CONFIRMED',
+        log_event(
+            event_type='TEST_POST_SUCCEEDED' if success else 'TEST_POST_FAILED',
             account=account,
-            content_summary=f"Test post to X: {'success' if success else 'failed'}",
+            content_summary='test',
             detail={'error': error_detail} if not success else {},
-            result_status='success' if success else 'failed'
+            result_status='success' if success else 'failed',
+            correlation_id=correlation_id,
         )
 
         if success:
@@ -137,9 +160,10 @@ class AccountDeleteView(LoginRequiredMixin, DeleteView):
         with transaction.atomic():
             if affected:
                 cascade_cancel(affected, 'account_deleted')
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='DEPENDENCY_DELETE_CONFIRMED',
                 account=self.object,
                 detail={'deleted': 'account', 'name': self.object.name},
+                result_status='confirmed',
             )
             return super().form_valid(form)

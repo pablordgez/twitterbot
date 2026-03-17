@@ -73,8 +73,10 @@ class ReuseExhaustionTests(TestCase):
         self.assertEqual(occ.status, Occurrence.Status.SKIPPED)
         self.assertEqual(occ.cancel_reason, "all tweets exhausted – skip until more added")
         
-        # History event should not be created for SKIP, only for STOP
-        self.assertFalse(HistoryEvent.objects.filter(occurrence=occ).exists())
+        event = HistoryEvent.objects.filter(occurrence=occ, event_type='OCCURRENCE_EXECUTION_BLOCKED').first()
+        self.assertIsNotNone(event)
+        self.assertEqual(event.result_status, Occurrence.Status.SKIPPED)
+        self.assertEqual(event.detail['reason'], "all tweets exhausted – skip until more added")
 
     def test_exhaustion_stop(self):
         schedule = self._create_schedule(Schedule.ExhaustionBehavior.STOP)

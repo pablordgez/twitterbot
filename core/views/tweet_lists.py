@@ -8,7 +8,7 @@ from django.db.models import Count
 
 from ..models.tweets import TweetList, TweetEntry
 from ..models.schedules import ScheduleSourceList
-from ..models.history import HistoryEvent
+from ..services.history import log_event
 from ..forms.tweet_lists import TweetListForm
 from ..forms.tweet_entries import TweetEntryForm
 from ..services.dependency_cascade import check_list_dependencies, cascade_cancel
@@ -56,9 +56,10 @@ class TweetListDeleteView(LoginRequiredMixin, DeleteView):
         with transaction.atomic():
             if affected:
                 cascade_cancel(affected, 'list_deleted')
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='DEPENDENCY_DELETE_CONFIRMED',
                 detail={'deleted': 'tweet_list', 'name': self.object.name},
+                result_status='confirmed',
             )
             messages.success(self.request, "Tweet list deleted and linked schedules canceled.")
             return super().form_valid(form)

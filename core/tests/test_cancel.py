@@ -47,7 +47,7 @@ class OccurrenceCancelTests(TestCase):
         self.assertEqual(self.occurrence.cancel_reason, 'manual')
         
         # Check audit log
-        history = HistoryEvent.objects.filter(occurrence=self.occurrence, event_type='SCHEDULE_CANCELED').first()
+        history = HistoryEvent.objects.filter(occurrence=self.occurrence, event_type='OCCURRENCE_CANCELED').first()
         self.assertIsNotNone(history)
         self.assertEqual(history.schedule, self.schedule)
 

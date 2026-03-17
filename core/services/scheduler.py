@@ -6,7 +6,7 @@ from django.db import transaction, IntegrityError
 
 from core.models.system import SchedulerLease
 from core.models.execution import Occurrence, OccurrenceAttempt
-from core.models.history import HistoryEvent
+from core.services.history import log_event
 from core.services.occurrence_materializer import refresh_rolling_horizon
 from core.services.posting_executor import execute_occurrence_attempts
 
@@ -53,7 +53,7 @@ def startup_scan_missed() -> int:
         occ.status = Occurrence.Status.MISSED
         occ.save()
         count += 1
-        HistoryEvent.objects.create(
+        log_event(
             event_type='OCCURRENCE_MISSED',
             schedule=occ.schedule,
             occurrence=occ,
@@ -64,6 +64,7 @@ def startup_scan_missed() -> int:
 def execute_scheduler_tick(owner_id: str) -> bool:
     if not acquire_or_renew_lease(owner_id):
         logger.warning(f"SCHEDULER_LEASE_CONFLICT: {owner_id} failed to acquire lease")
+        log_event('SCHEDULER_LEASE_CONFLICT', detail={'owner_id': owner_id})
         return False
         
     now = timezone.now()
@@ -91,7 +92,7 @@ def execute_scheduler_tick(owner_id: str) -> bool:
                         validation_ok=False
                     )
                 
-                HistoryEvent.objects.create(
+                log_event(
                     event_type='OCCURRENCE_CLAIMED',
                     schedule=occ_locked.schedule,
                     occurrence=occ_locked,
@@ -123,6 +124,7 @@ def execute_scheduler_tick(owner_id: str) -> bool:
 
 def run_scheduler_loop(owner_id: str, stop_event=None):
     logger.info(f"Starting scheduler loop with owner {owner_id}")
+    log_event('SCHEDULER_LEASE_ACQUIRED', detail={'owner_id': owner_id})
     startup_scan_missed()
     
     while True:

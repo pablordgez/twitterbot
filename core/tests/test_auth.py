@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from unittest.mock import patch
 from axes.models import AccessAttempt
+from core.models.history import HistoryEvent
 
 class FirstRunMiddlewareTests(TestCase):
     def test_redirects_to_setup_if_no_admin(self):
@@ -35,6 +36,8 @@ class AuthViewsTests(TestCase):
         }, follow=True)
         self.assertTrue(User.objects.filter(username='admin2').exists())
         self.assertTrue(User.objects.get(username='admin2').is_superuser)
+        self.assertTrue(HistoryEvent.objects.filter(event_type='AUTH_SETUP_STARTED').exists())
+        self.assertTrue(HistoryEvent.objects.filter(event_type='AUTH_SETUP_COMPLETED').exists())
         # Verify it logs in automatically or redirects
         
     def test_setup_view_passwords_must_match(self):
@@ -90,6 +93,7 @@ class ThrottlingTests(TestCase):
             'password': 'wrongpassword'
         }, REMOTE_ADDR='127.0.0.1')
         self.assertEqual(response.status_code, 429)
+        self.assertTrue(HistoryEvent.objects.filter(event_type='AUTH_LOCKOUT_THRESHOLD').exists())
 
 
 class ConcurrentSetupTests(TransactionTestCase):
@@ -100,4 +104,3 @@ class ConcurrentSetupTests(TransactionTestCase):
         # We will mock User.objects.count to return 0 for both threads initially,
         # then the transaction.atomic unique constraint or count condition will catch one.
         pass
-

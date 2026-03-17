@@ -45,6 +45,7 @@ class AccountTests(TestCase):
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(PostingAccount.objects.filter(name='New Account').exists())
+        self.assertTrue(HistoryEvent.objects.filter(event_type='ACCOUNT_CREATED', account__name='New Account').exists())
 
     def test_account_update(self):
         url = reverse('core:account_update', kwargs={'pk': self.account.pk})
@@ -57,6 +58,7 @@ class AccountTests(TestCase):
         self.account.refresh_from_db()
         self.assertEqual(self.account.name, 'Updated Name')
         self.assertFalse(self.account.is_active)
+        self.assertTrue(HistoryEvent.objects.filter(event_type='ACCOUNT_UPDATED', account=self.account).exists())
 
     def test_account_detail_masked_secret(self):
         json_data = json.dumps({"test": "data"})
@@ -123,3 +125,12 @@ class AccountTests(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(HistoryEvent.objects.filter(event_type='TEST_POST_CONFIRMED').exists())
+        outcome = HistoryEvent.objects.filter(event_type='TEST_POST_SUCCEEDED').first()
+        self.assertIsNotNone(outcome)
+        self.assertEqual(outcome.content_summary, 'test')
+        self.assertTrue(
+            HistoryEvent.objects.filter(
+                event_type='TEST_POST_CONFIRMED',
+                correlation_id=outcome.correlation_id,
+            ).exists()
+        )

@@ -18,7 +18,7 @@ from core.forms.schedules import ScheduleForm
 from core.models.accounts import PostingAccount
 from core.models.schedules import Schedule, ScheduleSourceList, ScheduleTargetAccount
 from core.models.tweets import TweetList
-from core.models.history import HistoryEvent
+from core.services.history import log_event
 from core.services.schedule_logic import increment_version
 from core.services.occurrence_materializer import materialize_for_schedule
 
@@ -70,6 +70,13 @@ class ScheduleCreateView(LoginRequiredMixin, CreateView):
             # Generate future occurrences
             materialize_for_schedule(self.object)
 
+            # Audit log
+            log_event(
+                event_type='SCHEDULE_CREATED',
+                schedule=self.object,
+                result_status='success',
+            )
+
         messages.success(self.request, 'Schedule created successfully.')
         return redirect(self.get_success_url())
 
@@ -120,9 +127,10 @@ class ScheduleUpdateView(LoginRequiredMixin, UpdateView):
             materialize_for_schedule(self.object)
 
             # Audit log
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='SCHEDULE_EDITED',
                 schedule=self.object,
+                result_status='success',
             )
 
         messages.success(self.request, 'Schedule updated successfully.')
@@ -169,9 +177,12 @@ class ScheduleCancelView(LoginRequiredMixin, View):
             )
             
             # 3. Log audit event
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='SCHEDULE_CANCELED',
                 schedule=schedule,
+                result_status='canceled',
+                detail={'reason': 'schedule_canceled'},
+                correlation_id=f"schedule:{schedule.id}",
             )
             
         messages.success(request, 'Schedule and all future occurrences canceled.')

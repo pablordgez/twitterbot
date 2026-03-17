@@ -4,7 +4,7 @@ from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from core.models.execution import Occurrence
-from core.models.history import HistoryEvent
+from core.services.history import log_event
 
 class UpcomingListView(LoginRequiredMixin, ListView):
     model = Occurrence
@@ -29,14 +29,14 @@ class OccurrenceCancelView(LoginRequiredMixin, View):
         occurrence.status = Occurrence.Status.CANCELED
         occurrence.cancel_reason = 'manual'
         occurrence.save()
-        
-        HistoryEvent.objects.create(
-            event_type='SCHEDULE_CANCELED',
+
+        log_event(
+            event_type='OCCURRENCE_CANCELED',
             schedule=occurrence.schedule,
             occurrence=occurrence,
             result_status='canceled',
-            detail={'reason': 'manual_cancellation'}
-        )
-        
+            detail={'reason': 'manual_cancellation'},
+            correlation_id=f"occurrence:{occurrence.id}",
+        )        
         messages.success(request, f"Occurrence #{occurrence.pk} for {occurrence.schedule.get_schedule_type_display()} schedule canceled.")
         return redirect('core:upcoming_list')

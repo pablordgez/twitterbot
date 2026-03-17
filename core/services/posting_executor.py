@@ -7,8 +7,8 @@ from django.core.exceptions import ValidationError
 from core.models.accounts import PostingAccount, PostingAccountSecret
 from core.models.execution import OccurrenceAttempt, Occurrence, RecurringUsageState
 from core.models.schedules import Schedule
-from core.models.history import HistoryEvent
 from core.services.encryption import decrypt
+from core.services.history import log_event
 from core.services.content_resolver import resolve_content_for_occurrence
 from core.services.notification_engine import handle_posting_result
 
@@ -39,6 +39,10 @@ FEATURES_PAYLOAD = {
     "responsive_web_graphql_timeline_navigation_enabled": True,
     "responsive_web_enhance_cards_enabled": False
 }
+
+
+def _attempt_correlation_id(attempt: OccurrenceAttempt) -> str:
+    return f"occurrence:{attempt.occurrence_id}:account:{attempt.target_account_id}"
 
 def execute_occurrence_attempts(occurrence_id: int):
     """
@@ -132,11 +136,14 @@ def execute_attempt(attempt: OccurrenceAttempt):
                     tweet_entry_id=attempt.resolved_tweet_entry_id
                 )
 
-        HistoryEvent.objects.create(
+        log_event(
             event_type='POST_ATTEMPT_SUCCEEDED',
             account=account,
+            schedule=occurrence.schedule,
             occurrence=occurrence,
-            content_summary=f"Successfully posted for {account.name}"
+            content_summary=attempt.resolved_content or "",
+            result_status=OccurrenceAttempt.PostResult.SUCCESS,
+            correlation_id=_attempt_correlation_id(attempt),
         )
         handle_posting_result(account, True, attempt)
     else:
@@ -144,11 +151,15 @@ def execute_attempt(attempt: OccurrenceAttempt):
         attempt.error_detail = _redact_error(error_detail)
         attempt.save(update_fields=['post_result', 'error_detail'])
         
-        HistoryEvent.objects.create(
+        log_event(
             event_type='POST_ATTEMPT_FAILED',
             account=account,
+            schedule=occurrence.schedule,
             occurrence=occurrence,
-            content_summary=f"Failed to post for {account.name}: {attempt.error_detail}"
+            content_summary=attempt.resolved_content or "",
+            result_status=OccurrenceAttempt.PostResult.FAILED,
+            detail={'error': attempt.error_detail},
+            correlation_id=_attempt_correlation_id(attempt),
         )
         handle_posting_result(account, False, attempt)
 
@@ -245,11 +256,15 @@ def _fail_attempt(attempt: OccurrenceAttempt, result: str, detail: str):
     attempt.error_detail = detail
     attempt.save(update_fields=['post_result', 'validation_ok', 'error_detail'])
     
-    HistoryEvent.objects.create(
+    log_event(
         event_type='POST_ATTEMPT_FAILED',
         account=attempt.target_account,
+        schedule=attempt.occurrence.schedule,
         occurrence=attempt.occurrence,
-        content_summary=f"Validation failed: {detail}"
+        content_summary=attempt.resolved_content or "",
+        result_status=result,
+        detail={'error': detail},
+        correlation_id=_attempt_correlation_id(attempt),
     )
     handle_posting_result(attempt.target_account, False, attempt)
 

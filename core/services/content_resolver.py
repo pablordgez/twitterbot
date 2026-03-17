@@ -4,7 +4,7 @@ from django.db import transaction
 from core.models.execution import Occurrence, RecurringUsageState
 from core.models.schedules import Schedule
 from core.models.tweets import TweetEntry
-from core.models.history import HistoryEvent
+from core.services.history import log_event
 
 def resolve_content_for_occurrence(occurrence: Occurrence):
     """
@@ -94,11 +94,14 @@ def _handle_exhaustion(occurrence: Occurrence, exhaust_type: str):
         reason = "all tweets exhausted – skip until more added"
     else:
         reason = "all tweets exhausted – stop"
-        HistoryEvent.objects.create(
-            event_type='OCCURRENCE_EXECUTION_BLOCKED',
-            schedule=schedule,
-            occurrence=occurrence,
-            content_summary=reason
-        )
+    log_event(
+        event_type='OCCURRENCE_EXECUTION_BLOCKED',
+        schedule=schedule,
+        occurrence=occurrence,
+        content_summary=reason,
+        result_status=Occurrence.Status.SKIPPED,
+        detail={'reason': reason},
+        correlation_id=f"occurrence:{occurrence.id}",
+    )
     occurrence.cancel_reason = reason
     occurrence.save(update_fields=['status', 'cancel_reason'])

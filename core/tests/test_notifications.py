@@ -110,6 +110,7 @@ class NotificationEngineTests(TestCase):
         event = HistoryEvent.objects.filter(event_type='NOTIFICATION_FAILED').first()
         self.assertIsNotNone(event)
         self.assertIn("SMTP Server Down", event.content_summary)
+        self.assertEqual(event.result_status, 'failed')
 
     def test_per_account_independence(self):
         account_first_2 = PostingAccount.objects.create(
@@ -162,3 +163,18 @@ class NotificationEngineTests(TestCase):
         handle_posting_result(self.account_every, False, attempt)
         
         self.assertEqual(len(mail.outbox), 0)
+
+    @patch("django.core.mail.EmailMessage.send")
+    def test_notification_failure_redacts_secret_like_exception_text(self, mock_send):
+        attempt = self.create_attempt(self.account_every)
+        mock_send.side_effect = Exception(
+            "SMTP failure authorization=Bearer super-secret-token token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        )
+
+        handle_posting_result(self.account_every, False, attempt)
+
+        event = HistoryEvent.objects.filter(event_type='NOTIFICATION_FAILED').first()
+        self.assertIsNotNone(event)
+        self.assertNotIn('super-secret-token', event.detail['error'])
+        self.assertNotIn('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', event.detail['error'])
+        self.assertIn('***REDACTED***', event.detail['error'])

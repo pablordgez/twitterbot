@@ -4,11 +4,17 @@ from django.utils import timezone
 
 from core.models.accounts import PostingAccount
 from core.models.notifications import SMTPSettings, NotificationRecipient, NotificationAccountState
-from core.models.history import HistoryEvent
 from core.models.execution import OccurrenceAttempt
 from core.services.encryption import decrypt
+from core.services.history import log_event
 
 logger = logging.getLogger(__name__)
+
+
+def _attempt_correlation_id(attempt: OccurrenceAttempt | None) -> str:
+    if not attempt:
+        return ""
+    return f"occurrence:{attempt.occurrence_id}:account:{attempt.target_account_id}"
 
 def handle_posting_result(account: PostingAccount, success: bool, attempt: OccurrenceAttempt = None):
     """
@@ -104,20 +110,27 @@ def _send_failure_email(account: PostingAccount, attempt: OccurrenceAttempt) -> 
         email.send()
         
         # Log successful notification sending
-        HistoryEvent.objects.create(
+        log_event(
             event_type='NOTIFICATION_SENT',
             account=account,
+            schedule=attempt.occurrence.schedule if attempt else None,
             occurrence=attempt.occurrence if attempt else None,
-            content_summary=f"Failure notification sent for {account.name}"
+            content_summary=f"Failure notification sent for {account.name}",
+            result_status='sent',
+            correlation_id=_attempt_correlation_id(attempt),
         )
         return True
 
     except Exception as e:
         logger.error(f"Failed to send notification email: {e}")
-        HistoryEvent.objects.create(
+        log_event(
             event_type='NOTIFICATION_FAILED',
             account=account,
+            schedule=attempt.occurrence.schedule if attempt else None,
             occurrence=attempt.occurrence if attempt else None,
-            content_summary=f"Notification delivery failed: {str(e)}"
+            content_summary=f"Notification delivery failed: {str(e)}",
+            result_status='failed',
+            detail={'error': str(e)},
+            correlation_id=_attempt_correlation_id(attempt),
         )
         return False
