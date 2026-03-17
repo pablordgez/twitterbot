@@ -70,6 +70,7 @@ class AccountCurlImportView(LoginRequiredMixin, View):
             field_hash = hashlib.sha256(json_dump.encode('utf-8')).hexdigest()
             
             with transaction.atomic():
+                is_replacement = hasattr(account, 'secret')
                 PostingAccountSecret.objects.update_or_create(
                     account=account,
                     defaults={
@@ -78,7 +79,7 @@ class AccountCurlImportView(LoginRequiredMixin, View):
                     }
                 )
                 HistoryEvent.objects.create(
-                    event_type='ACCOUNT_SECRET_REPLACED' if hasattr(account, 'secret') else 'ACCOUNT_IMPORT_ACCEPTED',
+                    event_type='ACCOUNT_SECRET_REPLACED' if is_replacement else 'ACCOUNT_IMPORT_ACCEPTED',
                     account=account,
                     content_summary='cURL data imported'
                 )
@@ -103,21 +104,21 @@ class AccountTestPostView(LoginRequiredMixin, View):
     def post(self, request, pk):
         account = get_object_or_404(PostingAccount, pk=pk)
         
-        # In a real scenario, decrypt secrets, build request, post to X
-        # For now, stub
-        success = True
+        from core.services.posting_executor import execute_test_post
+        success, error_detail = execute_test_post(account, content='test')
         
         HistoryEvent.objects.create(
             event_type='TEST_POST_CONFIRMED',
             account=account,
-            content_summary='Test post to X',
+            content_summary=f"Test post to X: {'success' if success else 'failed'}",
+            detail={'error': error_detail} if not success else {},
             result_status='success' if success else 'failed'
         )
 
         if success:
             messages.success(request, "Test post succeeded.")
         else:
-            messages.error(request, "Test post failed.")
+            messages.error(request, f"Test post failed: {error_detail}")
 
         return redirect('core:account_detail', pk=pk)
 
