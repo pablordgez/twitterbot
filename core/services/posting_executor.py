@@ -5,7 +5,8 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 
 from core.models.accounts import PostingAccount, PostingAccountSecret
-from core.models.execution import OccurrenceAttempt, Occurrence
+from core.models.execution import OccurrenceAttempt, Occurrence, RecurringUsageState
+from core.models.schedules import Schedule
 from core.models.history import HistoryEvent
 from core.services.encryption import decrypt
 from core.services.content_resolver import resolve_content_for_occurrence
@@ -123,6 +124,13 @@ def execute_attempt(attempt: OccurrenceAttempt):
         attempt.external_response_meta = response_meta
         attempt.save(update_fields=['post_result', 'external_response_meta'])
         
+        if occurrence.schedule.schedule_type == Schedule.ScheduleType.RECURRING and not occurrence.schedule.reuse_enabled:
+            if attempt.resolved_tweet_entry_id:
+                RecurringUsageState.objects.get_or_create(
+                    schedule=occurrence.schedule,
+                    tweet_entry_id=attempt.resolved_tweet_entry_id
+                )
+
         HistoryEvent.objects.create(
             event_type='POST_ATTEMPT_SUCCEEDED',
             account=account,
