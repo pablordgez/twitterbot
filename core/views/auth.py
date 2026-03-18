@@ -3,8 +3,11 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib.auth.models import User
 from django.db import transaction, IntegrityError
-from django.contrib.auth import login
-from django.contrib.auth.views import LoginView as BaseLoginView
+from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.views import LoginView as BaseLoginView, PasswordChangeView as BasePasswordChangeView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.contrib import messages
 
 from core.services.history import log_event
 
@@ -67,3 +70,18 @@ class LoginView(BaseLoginView):
         logger.warning(f"AUTH_LOGIN_FAILURE: Failed login attempt for username '{username}'.")
         log_event('AUTH_LOGIN_FAILURE', detail={'username': username})
         return super().form_invalid(form)
+
+class PasswordChangeView(LoginRequiredMixin, BasePasswordChangeView):
+    template_name = 'auth/password_change.html'
+    success_url = reverse_lazy('core:dashboard')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Update session to prevent logout
+        update_session_auth_hash(self.request, form.user)
+        
+        logger.info(f"AUTH_PASSWORD_CHANGED: User {self.request.user.username} changed their password.")
+        log_event('AUTH_PASSWORD_CHANGED', detail={'username': self.request.user.username})
+        
+        messages.success(self.request, 'Your password has been successfully changed.')
+        return response

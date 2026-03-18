@@ -1,7 +1,8 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
-from .views.auth import SetupView, LoginView
+from .views.auth import SetupView, LoginView, PasswordChangeView
 from .views.dashboard import DashboardView
+# ... (rest of imports omitted for brevity in instruction, will provide full strings in actual call)
 from .views.accounts import (
     AccountListView, AccountCreateView, AccountUpdateView,
     AccountDetailView, AccountDeleteView, AccountCurlImportView, AccountTestPostView
@@ -26,6 +27,7 @@ urlpatterns = [
     path('setup/', SetupView.as_view(), name='setup'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('password-change/', PasswordChangeView.as_view(), name='password_change'),
     
     path('accounts/', AccountListView.as_view(), name='account_list'),
     path('accounts/create/', AccountCreateView.as_view(), name='account_create'),
