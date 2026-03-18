@@ -1,11 +1,12 @@
+{% load ui_tags %}
 <tr>
     <td>
         <div>{{ occurrence.due_at|date:"Y-m-d H:i" }}</div>
-        <div class="text-secondary">{{ occurrence.display_timezone }}</div>
+        <div class="text-secondary small"><code>{{ occurrence.display_timezone }}</code></div>
     </td>
     <td>
-        <div><a href="{% url 'core:schedule_detail' occurrence.schedule.pk %}">{{ occurrence.schedule.get_schedule_type_display }} #{{ occurrence.schedule.pk }}</a></div>
-        <div class="text-secondary"><span class="badge bg-blue-lt">{{ occurrence.schedule.get_schedule_type_display }}</span></div>
+        <div><a href="{% url 'core:schedule_detail' occurrence.schedule.pk %}">#{{ occurrence.schedule.pk }}</a></div>
+        <div class="mt-1">{% schedule_type_badge occurrence.schedule.schedule_type %}</div>
     </td>
     <td>
         {% for target in occurrence.schedule.target_accounts.all %}
@@ -15,17 +16,20 @@
         {% endfor %}
     </td>
     <td class="text-truncate" style="max-width: 250px;">
-        {% if occurrence.schedule.content_mode == 'fixed_new' or occurrence.schedule.content_mode == 'fixed_from_list' %}
-            {{ occurrence.schedule.fixed_content }}
-        {% elif occurrence.schedule.content_mode == 'random_from_list' %}
-            <span class="text-secondary">Random from: {{ occurrence.schedule.source_lists.first.tweet_list.name }}</span>
-        {% elif occurrence.schedule.content_mode == 'random_from_lists' %}
-            <span class="text-secondary">Random from multiple lists</span>
-        {% elif occurrence.schedule.content_mode == 'random_from_query' %}
-            <span class="text-secondary">Random from query</span>
-        {% else %}
-            <span class="text-secondary">Unknown</span>
-        {% endif %}
+        <div class="mb-1">{% content_mode_badge occurrence.schedule.content_mode %}</div>
+        <div class="small">
+            {% if occurrence.schedule.content_mode == 'fixed_new' or occurrence.schedule.content_mode == 'fixed_from_list' %}
+                {{ occurrence.schedule.fixed_content }}
+            {% elif occurrence.schedule.content_mode == 'random_from_list' %}
+                <span class="text-secondary">Random from: {{ occurrence.schedule.source_lists.first.tweet_list.name }}</span>
+            {% elif occurrence.schedule.content_mode == 'random_from_lists' %}
+                <span class="text-secondary">Random from multiple lists</span>
+            {% elif occurrence.schedule.content_mode == 'random_from_query' %}
+                <span class="text-secondary">Random from query</span>
+            {% else %}
+                <span class="text-secondary">Unknown</span>
+            {% endif %}
+        </div>
     </td>
     <td><span class="status status-yellow">{{ occurrence.get_status_display }}</span></td>
     <td>

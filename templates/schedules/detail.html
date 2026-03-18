@@ -40,7 +40,7 @@
           </div>
           <div class="datagrid-item">
             <div class="datagrid-title">Timezone</div>
-            <div class="datagrid-content">{{ schedule.timezone_name }}</div>
+            <div class="datagrid-content"><code>{{ schedule.timezone_name }}</code> {% dst_badge schedule %}</div>
           </div>
           <div class="datagrid-item">
             <div class="datagrid-title">Start</div>
