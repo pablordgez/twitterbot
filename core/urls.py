@@ -21,6 +21,7 @@ from .views.schedules import (
 )
 from .views.upcoming import UpcomingListView, OccurrenceCancelView
 from .views.settings import SMTPSettingsView, RecipientCreateView, RecipientDeleteView, TestEmailView
+from .views.history import HistoryListView, HistoryDetailRowView
 
 app_name = 'core'
 
@@ -66,4 +67,7 @@ urlpatterns = [
 
     path('upcoming/', UpcomingListView.as_view(), name='upcoming_list'),
     path('upcoming/<int:pk>/cancel/', OccurrenceCancelView.as_view(), name='occurrence_cancel'),
+
+    path('history/', HistoryListView.as_view(), name='history_list'),
+    path('history/<int:pk>/row/', HistoryDetailRowView.as_view(), name='history_detail_row'),
 ]

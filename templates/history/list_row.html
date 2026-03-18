@@ -1,0 +1,31 @@
+<tr id="history-row-{{ event.pk }}">
+  <td>{{ event.timestamp|date:"Y-m-d H:i:s" }}</td>
+  <td>
+    <span class="badge bg-blue-lt">{{ event.event_type }}</span>
+  </td>
+  <td>{{ event.account|default:"-" }}</td>
+  <td>{{ event.schedule|default:"-" }}</td>
+  <td>
+    <div style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ event.content_summary }}">
+      {{ event.content_summary|default:"-" }}
+    </div>
+  </td>
+  <td>
+    {% if event.result_status == 'success' %}
+      <span class="badge bg-success text-success-fg">Success</span>
+    {% elif event.result_status == 'failed' %}
+      <span class="badge bg-danger text-danger-fg">Failed</span>
+    {% elif event.result_status == 'missed' or event.result_status == 'skipped' or event.result_status == 'canceled' %}
+      <span class="badge bg-warning text-warning-fg">{{ event.result_status|title }}</span>
+    {% elif event.result_status %}
+      <span class="badge bg-secondary text-secondary-fg">{{ event.result_status|title }}</span>
+    {% else %}
+      -
+    {% endif %}
+  </td>
+  <td class="text-end">
+    <button class="btn btn-sm btn-outline-secondary" hx-get="{% url 'core:history_detail_row' event.pk %}" hx-target="#history-row-{{ event.pk }}" hx-swap="outerHTML">
+      Detail
+    </button>
+  </td>
+</tr>
