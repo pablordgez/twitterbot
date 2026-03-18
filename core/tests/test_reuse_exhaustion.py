@@ -53,10 +53,10 @@ class ReuseExhaustionTests(TestCase):
         schedule = self._create_schedule(Schedule.ExhaustionBehavior.SKIP)
         # Mark entry1 as used
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry1)
-        
+
         occ = self._create_occurrence(schedule)
         resolve_content_for_occurrence(occ)
-        
+
         occ.refresh_from_db()
         self.assertEqual(occ.resolved_content, "Tweet B")
         self.assertEqual(occ.resolved_tweet_entry, self.entry2)
@@ -65,29 +65,31 @@ class ReuseExhaustionTests(TestCase):
         schedule = self._create_schedule(Schedule.ExhaustionBehavior.SKIP)
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry1)
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry2)
-        
+
         occ = self._create_occurrence(schedule)
         resolve_content_for_occurrence(occ)
-        
+
         occ.refresh_from_db()
         self.assertEqual(occ.status, Occurrence.Status.SKIPPED)
         self.assertEqual(occ.cancel_reason, "all tweets exhausted – skip until more added")
-        
-        # History event should not be created for SKIP, only for STOP
-        self.assertFalse(HistoryEvent.objects.filter(occurrence=occ).exists())
+
+        event = HistoryEvent.objects.filter(occurrence=occ, event_type='OCCURRENCE_EXECUTION_BLOCKED').first()
+        self.assertIsNotNone(event)
+        self.assertEqual(event.result_status, Occurrence.Status.SKIPPED)
+        self.assertEqual(event.detail['reason'], "all tweets exhausted – skip until more added")
 
     def test_exhaustion_stop(self):
         schedule = self._create_schedule(Schedule.ExhaustionBehavior.STOP)
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry1)
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry2)
-        
+
         occ = self._create_occurrence(schedule)
         resolve_content_for_occurrence(occ)
-        
+
         occ.refresh_from_db()
         self.assertEqual(occ.status, Occurrence.Status.SKIPPED)
         self.assertEqual(occ.cancel_reason, "all tweets exhausted – stop")
-        
+
         event = HistoryEvent.objects.filter(occurrence=occ, event_type='OCCURRENCE_EXECUTION_BLOCKED').first()
         self.assertIsNotNone(event)
         self.assertEqual(event.content_summary, "all tweets exhausted – stop")
@@ -96,10 +98,10 @@ class ReuseExhaustionTests(TestCase):
         schedule = self._create_schedule(Schedule.ExhaustionBehavior.RESET)
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry1)
         RecurringUsageState.objects.create(schedule=schedule, tweet_entry=self.entry2)
-        
+
         occ = self._create_occurrence(schedule)
         resolve_content_for_occurrence(occ)
-        
+
         occ.refresh_from_db()
         self.assertTrue(occ.content_resolved)
         # Should reset and pick one of the two
@@ -109,16 +111,16 @@ class ReuseExhaustionTests(TestCase):
 
     def test_executor_records_usage_on_success(self):
         from unittest.mock import patch
-        
+
         schedule = self._create_schedule(Schedule.ExhaustionBehavior.SKIP)
         occ = self._create_occurrence(schedule)
-        
+
         # Resolve content first
         resolve_content_for_occurrence(occ)
         occ.refresh_from_db()
-        
+
         attempt = occ.attempts.first()
-        
+
         # Mock _execute_post to return success
         with patch('core.services.posting_executor._execute_post') as mock_post:
             mock_post.return_value = (True, "", {})
@@ -133,11 +135,11 @@ class ReuseExhaustionTests(TestCase):
 
             with patch('core.services.posting_executor.decrypt') as mock_decrypt:
                 mock_decrypt.return_value = '{"queryId": "123"}'
-                execute_attempt(attempt)        
+                execute_attempt(attempt)
         attempt.refresh_from_db()
         print(f"Error detail: {attempt.error_detail}")
         self.assertEqual(attempt.post_result, OccurrenceAttempt.PostResult.SUCCESS)
-        
+
         # Verify usage state was created
         usage = RecurringUsageState.objects.filter(schedule=schedule).first()
         self.assertIsNotNone(usage)

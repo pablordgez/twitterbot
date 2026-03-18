@@ -8,8 +8,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.models.execution import Occurrence
-from core.models.history import HistoryEvent
-from core.models.schedules import Schedule, ScheduleSourceList, ScheduleTargetAccount
+from core.models.schedules import Schedule
+from core.services.history import log_event
 
 
 def check_account_dependencies(account):
@@ -60,7 +60,7 @@ def cascade_cancel(schedules, reason):
             )
 
             # 3. Audit event per schedule
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='DEPENDENCY_CASCADE_CANCEL',
                 schedule=schedule,
                 detail={'reason': reason},

@@ -1,7 +1,8 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
-from .views.auth import SetupView, LoginView
+from .views.auth import SetupView, LoginView, PasswordChangeView
 from .views.dashboard import DashboardView
+# ... (rest of imports omitted for brevity in instruction, will provide full strings in actual call)
 from .views.accounts import (
     AccountListView, AccountCreateView, AccountUpdateView,
     AccountDetailView, AccountDeleteView, AccountCurlImportView, AccountTestPostView
@@ -19,6 +20,9 @@ from .views.schedules import (
     RecurringFieldsPartialView, ContentModePartialView,
 )
 from .views.upcoming import UpcomingListView, OccurrenceCancelView
+from .views.settings import SMTPSettingsView, RecipientCreateView, RecipientDeleteView, TestEmailView
+from .views.history import HistoryListView, HistoryDetailRowView
+
 app_name = 'core'
 
 urlpatterns = [
@@ -26,7 +30,13 @@ urlpatterns = [
     path('setup/', SetupView.as_view(), name='setup'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
-    
+    path('password-change/', PasswordChangeView.as_view(), name='password_change'),
+
+    path('settings/smtp/', SMTPSettingsView.as_view(), name='smtp_settings'),
+    path('settings/recipients/add/', RecipientCreateView.as_view(), name='recipient_add'),
+    path('settings/recipients/<int:pk>/delete/', RecipientDeleteView.as_view(), name='recipient_delete'),
+    path('settings/smtp/test/', TestEmailView.as_view(), name='smtp_test_email'),
+
     path('accounts/', AccountListView.as_view(), name='account_list'),
     path('accounts/create/', AccountCreateView.as_view(), name='account_create'),
     path('accounts/<int:pk>/', AccountDetailView.as_view(), name='account_detail'),
@@ -57,4 +67,7 @@ urlpatterns = [
 
     path('upcoming/', UpcomingListView.as_view(), name='upcoming_list'),
     path('upcoming/<int:pk>/cancel/', OccurrenceCancelView.as_view(), name='occurrence_cancel'),
+
+    path('history/', HistoryListView.as_view(), name='history_list'),
+    path('history/<int:pk>/row/', HistoryDetailRowView.as_view(), name='history_detail_row'),
 ]

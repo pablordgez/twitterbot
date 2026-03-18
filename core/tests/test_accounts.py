@@ -19,9 +19,9 @@ class AccountTests(TestCase):
         self.admin_user = User.objects.create_superuser('admin', 'admin@test.com', 'password')
         self.client = Client()
         self.client.force_login(self.admin_user)
-        
+
         self.account = PostingAccount.objects.create(name="Test Account", is_active=True)
-        
+
         self.active_schedule = Schedule.objects.create(
             schedule_type='one_time',
             timezone_name='UTC',
@@ -45,6 +45,7 @@ class AccountTests(TestCase):
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(PostingAccount.objects.filter(name='New Account').exists())
+        self.assertTrue(HistoryEvent.objects.filter(event_type='ACCOUNT_CREATED', account__name='New Account').exists())
 
     def test_account_update(self):
         url = reverse('core:account_update', kwargs={'pk': self.account.pk})
@@ -57,15 +58,16 @@ class AccountTests(TestCase):
         self.account.refresh_from_db()
         self.assertEqual(self.account.name, 'Updated Name')
         self.assertFalse(self.account.is_active)
+        self.assertTrue(HistoryEvent.objects.filter(event_type='ACCOUNT_UPDATED', account=self.account).exists())
 
     def test_account_detail_masked_secret(self):
         json_data = json.dumps({"test": "data"})
         f = get_fernet_instance()
         enc = f.encrypt(json_data.encode('utf-8'))
         fh = hashlib.sha256(json_data.encode('utf-8')).hexdigest()
-        
+
         PostingAccountSecret.objects.create(account=self.account, encrypted_data=enc, field_hash=fh)
-        
+
         url = reverse('core:account_detail', kwargs={'pk': self.account.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -75,16 +77,16 @@ class AccountTests(TestCase):
 
     def test_account_delete_cascade_schedules(self):
         ScheduleTargetAccount.objects.create(schedule=self.active_schedule, account=self.account)
-        
+
         url = reverse('core:account_delete', kwargs={'pk': self.account.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("Warning: Dependency Impact", str(response.content))
-        
+
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertFalse(PostingAccount.objects.filter(id=self.account.id).exists())
-        
+
         self.active_schedule.refresh_from_db()
         self.assertEqual(self.active_schedule.status, 'canceled')
 
@@ -93,10 +95,10 @@ class AccountTests(TestCase):
         url = reverse('core:account_import', kwargs={'pk': self.account.pk})
         response = self.client.post(url, {'curl_text': curl_input})
         self.assertEqual(response.status_code, 302)
-        
+
         self.account.refresh_from_db()
         self.assertTrue(hasattr(self.account, 'secret'))
-        
+
         event = HistoryEvent.objects.filter(account=self.account).first()
         self.assertIsNotNone(event)
         self.assertEqual(event.event_type, 'ACCOUNT_IMPORT_ACCEPTED')
@@ -111,7 +113,7 @@ class AccountTests(TestCase):
         url = reverse('core:account_test_post', kwargs={'pk': self.account.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 405)
-        
+
         secret_data = {
             'headers': {'authorization': 'Bearer token', 'x-csrf-token': 'csrf'},
             'cookies': {'auth_token': 'auth', 'ct0': 'ct0', 'twid': 'twid'},
@@ -123,3 +125,12 @@ class AccountTests(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(HistoryEvent.objects.filter(event_type='TEST_POST_CONFIRMED').exists())
+        outcome = HistoryEvent.objects.filter(event_type='TEST_POST_SUCCEEDED').first()
+        self.assertIsNotNone(outcome)
+        self.assertEqual(outcome.content_summary, 'test')
+        self.assertTrue(
+            HistoryEvent.objects.filter(
+                event_type='TEST_POST_CONFIRMED',
+                correlation_id=outcome.correlation_id,
+            ).exists()
+        )

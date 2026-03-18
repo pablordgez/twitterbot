@@ -8,20 +8,20 @@ class CSVImportForm(forms.Form):
         help_text="Select the list where tweets will be imported.",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
-    
+
     import_mode = forms.ChoiceField(
         choices=[('file', 'Upload CSV File'), ('paste', 'Paste CSV Text')],
         widget=forms.RadioSelect(attrs={'class': 'form-check-input', 'hx-get': '#', 'hx-target': '#upload-fields-container'}),
         initial='file'
     )
-    
+
     csv_file = forms.FileField(
         required=False,
         label="CSV File",
         help_text="Max 5MB.",
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv'})
     )
-    
+
     csv_text = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),

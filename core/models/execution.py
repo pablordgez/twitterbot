@@ -22,7 +22,7 @@ class Occurrence(models.Model):
     resolved_tweet_entry = models.ForeignKey(TweetEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     cancel_reason = models.TextField(blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -35,7 +35,7 @@ class OccurrenceAttempt(models.Model):
     occurrence = models.ForeignKey(Occurrence, on_delete=models.CASCADE, related_name='attempts')
     target_account = models.ForeignKey(PostingAccount, on_delete=models.CASCADE)
     automatic_attempt_seq = models.PositiveIntegerField(default=1)
-    
+
     resolved_content = models.TextField(blank=True, null=True)
     resolved_tweet_entry = models.ForeignKey(TweetEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     validation_ok = models.BooleanField(default=False)
@@ -43,7 +43,7 @@ class OccurrenceAttempt(models.Model):
     error_detail = models.TextField(blank=True)
     external_response_meta = models.JSONField(blank=True, null=True)
     notification_sent = models.BooleanField(default=False)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

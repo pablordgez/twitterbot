@@ -12,7 +12,7 @@ class Schedule(models.Model):
         FIXED_FROM_LIST = 'fixed_from_list', 'Fixed From List'
         RANDOM_FROM_LIST = 'random_from_list', 'Random From List'
         RANDOM_FROM_LISTS = 'random_from_lists', 'Random From Lists'
-        
+
     class IntervalType(models.TextChoices):
         HOURS = 'hours', 'Hours'
         DAYS = 'days', 'Days'
@@ -32,17 +32,17 @@ class Schedule(models.Model):
     interval_type = models.CharField(max_length=20, choices=IntervalType.choices, blank=True, null=True)
     interval_value = models.PositiveIntegerField(blank=True, null=True)
     start_datetime = models.DateTimeField()
-    
+
     content_mode = models.CharField(max_length=30, choices=ContentMode.choices)
     fixed_content = models.TextField(blank=True, null=True)
     random_resolution_mode = models.CharField(max_length=20, choices=RandomResolutionMode.choices, blank=True, null=True)
-    
+
     reuse_enabled = models.BooleanField(default=False)
     exhaustion_behavior = models.CharField(max_length=20, choices=ExhaustionBehavior.choices, blank=True, null=True)
-    
+
     status = models.CharField(max_length=20, default='active') # active / canceled
     version = models.PositiveIntegerField(default=1)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

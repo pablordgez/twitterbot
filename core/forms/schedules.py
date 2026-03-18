@@ -14,7 +14,7 @@ from core.services.schedule_logic import validate_schedule
 
 
 TIMEZONE_MODE_CHOICES = [
-    ('system', f'System timezone'),
+    ('system', 'System timezone'),
     ('utc', 'UTC'),
     ('other', 'Other…'),
 ]

@@ -14,17 +14,17 @@ def test_parse_curl_valid():
       -H 'cookie: auth_token=TEST_AUTH_TOKEN; ct0=TEST_CT0; twid=TEST_TWID; other=ignoreme' \\
       --data-raw '{"variables":{}}'
     """
-    
+
     result = parse_curl_command(curl_input)
-    
+
     assert result['queryId'] == 'TEST_QUERY_ID'
     assert result['headers']['authorization'] == 'Bearer TEST_BEARER_TOKEN'
     assert result['headers']['x-csrf-token'] == 'TEST_CSRF_TOKEN'
     assert result['headers']['x-twitter-auth-type'] == 'OAuth2Session'
     assert result['headers']['user-agent'] == 'Mozilla/5.0'
-    
+
     assert 'authority' not in result['headers']
-    
+
     assert result['cookies']['auth_token'] == 'TEST_AUTH_TOKEN'
     assert result['cookies']['ct0'] == 'TEST_CT0'
     assert result['cookies']['twid'] == 'TEST_TWID'
@@ -73,7 +73,7 @@ def test_parse_curl_size_limit():
     curl_input = "a" * (50 * 1024 + 1)
     with pytest.raises(CurlParseError, match="50KB"):
         parse_curl_command(curl_input)
-        
+
 def test_parse_curl_lines_limit():
     curl_input = "a\\n" * 501
     with pytest.raises(CurlParseError, match="500 lines"):

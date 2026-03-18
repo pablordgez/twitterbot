@@ -1,4 +1,3 @@
-import os
 from django.conf import settings
 from cryptography.fernet import Fernet, MultiFernet
 from django.core.exceptions import ImproperlyConfigured
@@ -11,11 +10,11 @@ def get_fernet_instance():
     """
     if not hasattr(settings, 'ENCRYPTION_KEY') or not settings.ENCRYPTION_KEY:
         raise ImproperlyConfigured("ENCRYPTION_KEY setting is missing or empty.")
-    
+
     keys = [k.strip() for k in settings.ENCRYPTION_KEY.split(',') if k.strip()]
     if not keys:
         raise ImproperlyConfigured("No valid keys found in ENCRYPTION_KEY.")
-    
+
     fernets = []
     for key in keys:
         if key == getattr(settings, 'SECRET_KEY', None):
@@ -24,7 +23,7 @@ def get_fernet_instance():
             fernets.append(Fernet(key.encode('utf-8')))
         except ValueError as e:
             raise ImproperlyConfigured(f"Invalid Fernet key in ENCRYPTION_KEY: {str(e)}")
-            
+
     return MultiFernet(fernets)
 
 def validate_encryption_settings():
@@ -41,7 +40,7 @@ def encrypt(plaintext: str) -> bytes:
     """
     if not isinstance(plaintext, str):
         raise TypeError("plaintext must be a string")
-    
+
     f = get_fernet_instance()
     return f.encrypt(plaintext.encode('utf-8'))
 
@@ -51,7 +50,7 @@ def decrypt(ciphertext: bytes) -> str:
     """
     if not isinstance(ciphertext, bytes):
         raise TypeError("ciphertext must be bytes")
-        
+
     f = get_fernet_instance()
     return f.decrypt(ciphertext).decode('utf-8')
 
@@ -63,7 +62,7 @@ def mask_value(value: str, visible_chars: int = 4) -> str:
         return ""
     if len(value) <= visible_chars:
         return "•" * len(value)
-    
+
     masked_part = "•" * 6
     visible_part = value[-visible_chars:]
     return f"{masked_part}{visible_part}"

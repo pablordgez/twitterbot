@@ -44,6 +44,8 @@
                 </div>
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a href="{% url 'core:password_change' %}" class="dropdown-item">Change Password</a>
+                <div class="dropdown-divider"></div>
                 <form action="{% url 'core:logout' %}" method="post">
                     {% csrf_token %}
                     <button type="submit" class="dropdown-item">Logout</button>
@@ -81,7 +83,7 @@
                     <a class="dropdown-item" href="{% url 'core:schedule_list' %}">Manage Schedules</a>
                     <a class="dropdown-item" href="{% url 'core:schedule_create' %}">New Schedule</a>
                     <a class="dropdown-item" href="{% url 'core:upcoming_list' %}">Upcoming</a>
-                    <a class="dropdown-item" href="#">History</a>
+                    <a class="dropdown-item" href="{% url 'core:history_list' %}">History</a>
                   </div>
                 </li>
                 <li class="nav-item dropdown">
@@ -89,8 +91,7 @@
                     <span class="nav-link-title">Settings</span>
                   </a>
                   <div class="dropdown-menu">
-                    <a class="dropdown-item" href="#">SMTP</a>
-                    <a class="dropdown-item" href="#">Recipients</a>
+                    <a class="dropdown-item" href="{% url 'core:smtp_settings' %}">SMTP & Notifications</a>
                   </div>
                 </li>
               </ul>

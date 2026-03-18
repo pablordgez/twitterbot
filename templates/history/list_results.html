@@ -1,0 +1,36 @@
+{% for event in events %}
+  {% include "history/list_row.html" %}
+{% empty %}
+  <tr>
+    <td colspan="7" class="text-center">No history events found.</td>
+  </tr>
+{% endfor %}
+{% if page_obj.has_other_pages %}
+<tr>
+  <td colspan="7" class="text-center border-bottom-0">
+    <div class="d-flex justify-content-center mt-3 mb-2">
+      <ul class="pagination m-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" hx-get="?page={{ page_obj.previous_page_number }}" hx-target="#history-results" hx-include="#history-filter-form" style="cursor: pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="15 6 9 12 15 18" /></svg>
+            prev
+          </a>
+        </li>
+        {% endif %}
+        
+        <li class="page-item active"><a class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</a></li>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" hx-get="?page={{ page_obj.next_page_number }}" hx-target="#history-results" hx-include="#history-filter-form" style="cursor: pointer;">
+            next
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="9 6 15 12 9 18" /></svg>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </td>
+</tr>
+{% endif %}

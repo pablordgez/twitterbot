@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}History Log{% endblock %}
+
+{% block page_title %}History Log{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    {% include "history/filters.html" %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Event Type</th>
+          <th>Account</th>
+          <th>Schedule</th>
+          <th>Content Summary</th>
+          <th>Result</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="history-results">
+        {% include "history/list_results.html" %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

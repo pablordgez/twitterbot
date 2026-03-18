@@ -7,9 +7,8 @@ conditional field toggling on the schedule form.
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -18,7 +17,7 @@ from core.forms.schedules import ScheduleForm
 from core.models.accounts import PostingAccount
 from core.models.schedules import Schedule, ScheduleSourceList, ScheduleTargetAccount
 from core.models.tweets import TweetList
-from core.models.history import HistoryEvent
+from core.services.history import log_event
 from core.services.schedule_logic import increment_version
 from core.services.occurrence_materializer import materialize_for_schedule
 
@@ -66,9 +65,16 @@ class ScheduleCreateView(LoginRequiredMixin, CreateView):
                 ScheduleSourceList.objects.create(
                     schedule=self.object, tweet_list=tweet_list,
                 )
-            
+
             # Generate future occurrences
             materialize_for_schedule(self.object)
+
+            # Audit log
+            log_event(
+                event_type='SCHEDULE_CREATED',
+                schedule=self.object,
+                result_status='success',
+            )
 
         messages.success(self.request, 'Schedule created successfully.')
         return redirect(self.get_success_url())
@@ -120,9 +126,10 @@ class ScheduleUpdateView(LoginRequiredMixin, UpdateView):
             materialize_for_schedule(self.object)
 
             # Audit log
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='SCHEDULE_EDITED',
                 schedule=self.object,
+                result_status='success',
             )
 
         messages.success(self.request, 'Schedule updated successfully.')
@@ -155,25 +162,28 @@ class ScheduleCancelView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         schedule = get_object_or_404(Schedule, pk=pk)
-        
+
         with transaction.atomic():
             # 1. Update schedule status
             schedule.status = 'canceled'
             schedule.save(update_fields=['status', 'updated_at'])
-            
+
             # 2. Bulk cancel all pending occurrences
             schedule.occurrences.filter(status='pending').update(
                 status='canceled',
                 cancel_reason='schedule_canceled',
                 updated_at=timezone.now()
             )
-            
+
             # 3. Log audit event
-            HistoryEvent.objects.create(
+            log_event(
                 event_type='SCHEDULE_CANCELED',
                 schedule=schedule,
+                result_status='canceled',
+                detail={'reason': 'schedule_canceled'},
+                correlation_id=f"schedule:{schedule.id}",
             )
-            
+
         messages.success(request, 'Schedule and all future occurrences canceled.')
         return redirect('core:schedule_list')
 

@@ -15,7 +15,7 @@ class OccurrenceCancelTests(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
         self.account = PostingAccount.objects.create(name='TestAccount', is_active=True)
-        
+
         self.schedule = Schedule.objects.create(
             schedule_type='one_time',
             start_datetime=timezone.now() + timedelta(days=1),
@@ -25,7 +25,7 @@ class OccurrenceCancelTests(TestCase):
             fixed_content='Test content',
         )
         ScheduleTargetAccount.objects.create(schedule=self.schedule, account=self.account)
-        
+
         self.occurrence = Occurrence.objects.create(
             schedule=self.schedule,
             due_at=timezone.now() + timedelta(days=1),
@@ -37,17 +37,17 @@ class OccurrenceCancelTests(TestCase):
     def test_cancel_occurrence_success(self):
         url = reverse('core:occurrence_cancel', kwargs={'pk': self.occurrence.pk})
         response = self.client.post(url)
-        
+
         # Check redirect
         self.assertRedirects(response, reverse('core:upcoming_list'))
-        
+
         # Check status update
         self.occurrence.refresh_from_db()
         self.assertEqual(self.occurrence.status, Occurrence.Status.CANCELED)
         self.assertEqual(self.occurrence.cancel_reason, 'manual')
-        
+
         # Check audit log
-        history = HistoryEvent.objects.filter(occurrence=self.occurrence, event_type='SCHEDULE_CANCELED').first()
+        history = HistoryEvent.objects.filter(occurrence=self.occurrence, event_type='OCCURRENCE_CANCELED').first()
         self.assertIsNotNone(history)
         self.assertEqual(history.schedule, self.schedule)
 
@@ -67,14 +67,14 @@ class OccurrenceCancelTests(TestCase):
         # Already completed
         self.occurrence.status = Occurrence.Status.COMPLETED
         self.occurrence.save()
-        
+
         url = reverse('core:occurrence_cancel', kwargs={'pk': self.occurrence.pk})
         response = self.client.post(url)
-        
+
         # Should either error or do nothing. According to spec, only pending can be canceled.
         # Let's assume we redirect back with a message or just don't change it.
         # Implementation will probably use a 404 or a redirect if the queryset filters status=PENDING.
-        
+
         self.occurrence.refresh_from_db()
         self.assertEqual(self.occurrence.status, Occurrence.Status.COMPLETED)
 

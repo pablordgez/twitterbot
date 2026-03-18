@@ -2,9 +2,7 @@ from django.test import TestCase
 from django.db import IntegrityError
 from core.models import (
     PostingAccount, PostingAccountSecret, TweetList, TweetEntry, Schedule,
-    ScheduleTargetAccount, ScheduleSourceList, Occurrence, OccurrenceAttempt,
-    RecurringUsageState, SMTPSettings, NotificationRecipient, NotificationAccountState,
-    HistoryEvent, SchedulerLease
+    ScheduleTargetAccount, ScheduleSourceList, Occurrence, OccurrenceAttempt
 )
 from django.utils import timezone
 
@@ -32,7 +30,7 @@ class TestSchedule(TestCase):
     def test_create_schedule(self):
         acc = PostingAccount.objects.create(name="Test Account")
         tlist = TweetList.objects.create(name="Test List")
-        
+
         schedule = Schedule.objects.create(
             schedule_type=Schedule.ScheduleType.ONE_TIME,
             timezone_name="UTC",

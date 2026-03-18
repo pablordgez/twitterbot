@@ -1,7 +1,6 @@
 import json
 from unittest.mock import patch, MagicMock
 from django.utils import timezone
-from datetime import timedelta
 from django.test import TestCase
 
 import requests
@@ -19,14 +18,14 @@ class PostingExecutorTests(TestCase):
             'cookies': {'auth_token': 'auth', 'ct0': 'ct0', 'twid': 'twid'},
             'queryId': 'query_id_123'
         }
-        
+
         self.account = PostingAccount.objects.create(name="Test Account", is_active=True)
         PostingAccountSecret.objects.create(
             account=self.account,
             encrypted_data=encrypt(json.dumps(self.secret_data)),
             field_hash="hash"
         )
-        
+
         self.schedule = Schedule.objects.create(
             schedule_type='one_time',
             timezone_name='UTC',
@@ -34,7 +33,7 @@ class PostingExecutorTests(TestCase):
             content_mode='fixed_new',
             status='active'
         )
-        
+
         self.occurrence = Occurrence.objects.create(
             schedule=self.schedule,
             due_at=timezone.now(),
@@ -42,7 +41,7 @@ class PostingExecutorTests(TestCase):
             schedule_version=1,
             status=Occurrence.Status.PENDING
         )
-        
+
         self.attempt = OccurrenceAttempt.objects.create(
             occurrence=self.occurrence,
             target_account=self.account,
@@ -53,9 +52,9 @@ class PostingExecutorTests(TestCase):
     def test_pre_validation_rejects_missing_secrets(self, mock_post):
         self.account.secret.delete()
         self.account.refresh_from_db()
-        
+
         execute_attempt(self.attempt)
-        
+
         self.attempt.refresh_from_db()
         self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.VALIDATION_FAILED)
         self.assertFalse(self.attempt.validation_ok)
@@ -66,9 +65,9 @@ class PostingExecutorTests(TestCase):
     def test_pre_validation_rejects_inactive_account(self, mock_post):
         self.account.is_active = False
         self.account.save()
-        
+
         execute_attempt(self.attempt)
-        
+
         self.attempt.refresh_from_db()
         self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.VALIDATION_FAILED)
         self.assertIn("inactive", self.attempt.error_detail.lower())
@@ -78,9 +77,9 @@ class PostingExecutorTests(TestCase):
     def test_pre_validation_rejects_long_tweet(self, mock_post):
         self.attempt.resolved_content = "x" * 281
         self.attempt.save()
-        
+
         execute_attempt(self.attempt)
-        
+
         self.attempt.refresh_from_db()
         self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.VALIDATION_FAILED)
         self.assertIn("length invalid", self.attempt.error_detail.lower())
@@ -133,7 +132,7 @@ class PostingExecutorTests(TestCase):
 
         self.assertTrue(success)
         self.assertEqual(error, "")
-        
+
         # Simulate failure
         mock_post.side_effect = requests.exceptions.ConnectionError("Connection failed")
         success, error = execute_test_post(self.account, "Test tweet")
@@ -161,14 +160,14 @@ class PostingExecutorTests(TestCase):
                 resp.status_code = 200
                 resp.json.return_value = {}
                 return resp
-                
+
         mock_post.side_effect = side_effect
-        
+
         for att in [self.attempt, attempt2]:
             execute_attempt(att)
-    
+
         self.attempt.refresh_from_db()
         attempt2.refresh_from_db()
-        
+
         self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.FAILED)
         self.assertEqual(attempt2.post_result, OccurrenceAttempt.PostResult.SUCCESS)

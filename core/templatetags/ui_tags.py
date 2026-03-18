@@ -12,6 +12,12 @@ def schedule_type_badge(schedule_type):
     return format_html('<span class="badge">Unknown</span>')
 
 @register.simple_tag
+def dst_badge(schedule):
+    if schedule.schedule_type == 'recurring' and schedule.timezone_name != 'UTC':
+        return format_html('<span class="badge bg-green-lt" title="Automatic DST adjustment enabled">DST-Aware</span>')
+    return ''
+
+@register.simple_tag
 def content_mode_badge(content_mode):
     modes = {
         'fixed_new': ('Fixed (New)', 'gray'),

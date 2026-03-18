@@ -2,7 +2,7 @@ import pytest
 from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
-from core.models.schedules import Schedule, ScheduleTargetAccount, ScheduleSourceList
+from core.models.schedules import Schedule, ScheduleTargetAccount
 from core.models.accounts import PostingAccount
 from core.models.execution import Occurrence
 from core.models.history import HistoryEvent
@@ -68,7 +68,7 @@ def test_schedule_edit_preserves_past_occurrence(client, django_user_model, one_
 
     # Check that a new pending occurrence was generated
     new_occurrences = Occurrence.objects.filter(
-        schedule=one_time_schedule, 
+        schedule=one_time_schedule,
         status=Occurrence.Status.PENDING
     )
     assert new_occurrences.exists()
@@ -102,7 +102,7 @@ def test_schedule_edit_regenerates_future_recurring(client, django_user_model, t
         version=1
     )
     ScheduleTargetAccount.objects.create(schedule=schedule, account=test_account)
-    
+
     from core.services.occurrence_materializer import materialize_for_schedule
     materialize_for_schedule(schedule)
 

@@ -1,19 +1,222 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard | Twitter Bot</title>
-</head>
-<body>
-    <header>
-        <h1>Dashboard</h1>
-        <form method="post" action="{% url 'core:logout' %}">
-            {% csrf_token %}
-            <button type="submit">Logout</button>
-        </form>
-    </header>
-    <main>
-        <p>Welcome, {{ request.user.username }}!</p>
-    </main>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row row-cards">
+  <!-- Stats Cards -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <span class="bg-primary text-white avatar">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></svg>
+            </span>
+          </div>
+          <div class="col">
+            <div class="font-weight-medium">
+              {{ account_count }} Account{{ account_count|pluralize }}
+            </div>
+            <div class="text-secondary">
+              Configured posting accounts
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <span class="bg-green text-white avatar">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-stats" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" /><path d="M18 14v4h4" /><path d="M18 18m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M15 3v4" /><path d="M7 3v4" /><path d="M3 11h16" /></svg>
+            </span>
+          </div>
+          <div class="col">
+            <div class="font-weight-medium">
+              {{ active_schedule_count }} Active Schedule{{ active_schedule_count|pluralize }}
+            </div>
+            <div class="text-secondary">
+              Currently active schedules
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next Occurrence Card -->
+  <div class="col-md-6 col-lg-6">
+    <div class="card" style="height: calc(100% - 1.25rem);">
+      <div class="card-header">
+        <h3 class="card-title">Next Upcoming Post</h3>
+      </div>
+      <div class="card-body">
+        {% if next_occurrence %}
+          <div class="mb-3">
+            <div class="text-secondary mb-1">Scheduled for:</div>
+            <div class="h3 mb-0">{{ next_occurrence.due_at|date:"Y-m-d H:i" }} <span class="text-secondary fw-normal">({{ next_occurrence.display_timezone }})</span></div>
+          </div>
+          <div class="mb-3">
+            <div class="text-secondary mb-1">Schedule:</div>
+            <div>
+                <span class="badge bg-blue-lt">{{ next_occurrence.schedule.get_schedule_type_display }}</span>
+                <a href="{% url 'core:schedule_detail' next_occurrence.schedule.pk %}" class="ms-1">#{{ next_occurrence.schedule.pk }}</a>
+            </div>
+          </div>
+          <div>
+            <div class="text-secondary mb-1">Planned Content:</div>
+            {% if next_occurrence.content_resolved %}
+              <div class="text-muted text-truncate border p-2 bg-light rounded" style="max-width: 100%;">{{ next_occurrence.resolved_content }}</div>
+            {% else %}
+              <div class="text-muted border p-2 bg-light rounded italic">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-dice-5" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 3m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14z" /><path d="M9 9l0 .01" /><path d="M15 15l0 .01" /><path d="M15 9l0 .01" /><path d="M9 15l0 .01" /><path d="M12 12l0 .01" /></svg>
+                Randomly selected at post time
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="empty py-4">
+            <div class="empty-icon text-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-off" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h9a2 2 0 0 1 2 2v9m-.184 3.839a2 2 0 0 1 -1.816 1.161h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 1.158 -1.815" /><path d="M16 3v4" /><path d="M8 3v1" /><path d="M4 11h7m4 0h5" /><path d="M3 3l18 18" /></svg>
+            </div>
+            <p class="empty-title">No upcoming occurrences</p>
+            <p class="empty-subtitle text-secondary">
+              Try creating a new schedule to get started.
+            </p>
+          </div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-transparent mt-auto">
+        <div class="btn-list justify-content-end">
+          <a href="{% url 'core:upcoming_list' %}" class="btn btn-link">View all upcoming</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="col-md-6 col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Quick Actions</h3>
+      </div>
+      <div class="list-group list-group-flush">
+        <a href="{% url 'core:account_create' %}" class="list-group-item list-group-item-action">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <span class="bg-primary-lt text-primary avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-plus" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    </span>
+                </div>
+                <div class="col">
+                    <div class="font-weight-medium">Add Account</div>
+                    <div class="text-secondary">Configure a new posting profile</div>
+                </div>
+                <div class="col-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+                </div>
+            </div>
+        </a>
+        <a href="{% url 'core:schedule_create' %}" class="list-group-item list-group-item-action">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <span class="bg-green-lt text-green avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-plus" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5V3" /><path d="M8 3h8" /><path d="M4 11h16" /><path d="M19 16v3h3" /><path d="M19 22v-3" /><path d="M16 22h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" /></svg>
+                    </span>
+                </div>
+                <div class="col">
+                    <div class="font-weight-medium">Create Schedule</div>
+                    <div class="text-secondary">Schedule new posts</div>
+                </div>
+                <div class="col-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+                </div>
+            </div>
+        </a>
+        <a href="{% url 'core:history_list' %}" class="list-group-item list-group-item-action">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <span class="bg-yellow-lt text-yellow avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-history" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 8l0 4l2 2" /><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></svg>
+                    </span>
+                </div>
+                <div class="col">
+                    <div class="font-weight-medium">View History</div>
+                    <div class="text-secondary">Review past activities</div>
+                </div>
+                <div class="col-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+                </div>
+            </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent History -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Recent Activity</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table card-table table-vcenter text-nowrap">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Event Type</th>
+              <th>Status</th>
+              <th>Context</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in recent_events %}
+              <tr>
+                <td>{{ event.timestamp|date:"Y-m-d H:i" }}</td>
+                <td><span class="text-secondary">{{ event.event_type }}</span></td>
+                <td>
+                  {% if event.result_status == 'success' %}
+                    <span class="status status-green">
+                      <span class="status-dot status-dot-animated"></span>
+                      Success
+                    </span>
+                  {% elif event.result_status == 'failed' %}
+                    <span class="status status-red">
+                      <span class="status-dot status-dot-animated"></span>
+                      Failed
+                    </span>
+                  {% else %}
+                    <span class="status status-secondary">{{ event.result_status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                    {% if event.account %}
+                        <span class="badge bg-purple-lt">{{ event.account.name }}</span>
+                    {% endif %}
+                    {% if event.schedule %}
+                        <span class="badge bg-blue-lt">Schedule #{{ event.schedule.pk }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-truncate" style="max-width: 400px;">
+                    <span class="text-muted">{{ event.content_summary }}</span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-4">
+                  <div class="text-secondary italic">No recent activity recorded.</div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

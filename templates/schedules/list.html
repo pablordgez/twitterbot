@@ -20,6 +20,7 @@
           <th>Type</th>
           <th>Content Mode</th>
           <th>Timezone</th>
+          <th>DST</th>
           <th>Status</th>
           <th>Accounts</th>
           <th>Created</th>
@@ -32,7 +33,8 @@
           <td><a href="{% url 'core:schedule_detail' pk=schedule.pk %}">#{{ schedule.pk }}</a></td>
           <td>{% schedule_type_badge schedule.schedule_type %}</td>
           <td>{% content_mode_badge schedule.content_mode %}</td>
-          <td>{{ schedule.timezone_name }}</td>
+          <td><code>{{ schedule.timezone_name }}</code></td>
+          <td>{% dst_badge schedule %}</td>
           <td>{% status_badge schedule.status %}</td>
           <td>
             {% for sta in schedule.target_accounts.all %}

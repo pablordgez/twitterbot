@@ -17,56 +17,56 @@ class TestEncryptionService:
         ciphertext = encrypt(plaintext)
         assert isinstance(ciphertext, bytes)
         assert ciphertext != plaintext.encode('utf-8')
-        
+
         decrypted = decrypt(ciphertext)
         assert decrypted == plaintext
-        
+
     def test_wrong_key_fails_decryption(self, mock_settings):
         plaintext = "test-data"
         ciphertext = encrypt(plaintext)
-        
+
         # Change keys entirely
         mock_settings.ENCRYPTION_KEY = Fernet.generate_key().decode('utf-8')
-        
+
         from cryptography.fernet import InvalidToken
         with pytest.raises(InvalidToken):
             decrypt(ciphertext)
-            
+
     def test_multifernet_rotation(self, mock_settings):
         # Encrypt with key1 (primary)
         mock_settings.ENCRYPTION_KEY = self.key1
         ciphertext1 = encrypt("data1")
-        
+
         # Rotate: key2 is now primary, key1 is secondary
         mock_settings.ENCRYPTION_KEY = f"{self.key2},{self.key1}"
-        
+
         # Should still be able to decrypt data encrypted with key1
         assert decrypt(ciphertext1) == "data1"
-        
+
         # New encryptions use key2
         ciphertext2 = encrypt("data2")
-        
+
         # If we remove key2, we can't decrypt ciphertext2 but we can decrypt ciphertext1 if key1 is there
         mock_settings.ENCRYPTION_KEY = self.key1
         assert decrypt(ciphertext1) == "data1"
         from cryptography.fernet import InvalidToken
         with pytest.raises(InvalidToken):
             decrypt(ciphertext2)
-            
+
     def test_startup_validation_valid(self, mock_settings):
         # Should not raise
         validate_encryption_settings()
-        
+
     def test_startup_validation_duplicate_key(self, mock_settings):
         mock_settings.ENCRYPTION_KEY = mock_settings.SECRET_KEY
         with pytest.raises(ImproperlyConfigured, match="must not be equal to APP_SECRET_KEY"):
             validate_encryption_settings()
-            
+
     def test_startup_validation_weak_key(self, mock_settings):
         mock_settings.ENCRYPTION_KEY = "too-short"
         with pytest.raises(ImproperlyConfigured, match="Invalid Fernet key"):
             validate_encryption_settings()
-            
+
     def test_startup_validation_missing_key(self, mock_settings):
         mock_settings.ENCRYPTION_KEY = ""
         with pytest.raises(ImproperlyConfigured, match="ENCRYPTION_KEY setting is missing or empty."):
