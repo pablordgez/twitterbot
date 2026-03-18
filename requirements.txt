@@ -7,7 +7,7 @@ charset-normalizer==3.4.6
 cryptography==46.0.5
 cyclonedx-python-lib==11.7.0
 defusedxml==0.7.1
-Django==5.2a1
+Django==5.2.12
 django-axes==8.3.1
 filelock==3.25.2
 gunicorn==25.1.0
