@@ -48,8 +48,8 @@ class DashboardViewTest(TestCase):
     def test_dashboard_renders_correct_stats(self):
         response = self.client.get(reverse('core:dashboard'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '1 Accounts')
-        self.assertContains(response, '1 Active Schedules')
+        self.assertContains(response, '1 Account')
+        self.assertContains(response, '1 Active Schedule')
         self.assertContains(response, 'Next Upcoming Post')
         self.assertContains(response, 'POST_ATTEMPT_SUCCEEDED')
         self.assertContains(response, 'Success tweet')
@@ -57,9 +57,9 @@ class DashboardViewTest(TestCase):
     def test_dashboard_no_upcoming_occurrences(self):
         Occurrence.objects.all().delete()
         response = self.client.get(reverse('core:dashboard'))
-        self.assertContains(response, 'No upcoming occurrences.')
+        self.assertContains(response, 'No upcoming occurrences')
 
     def test_dashboard_no_recent_activity(self):
         HistoryEvent.objects.all().delete()
         response = self.client.get(reverse('core:dashboard'))
-        self.assertContains(response, 'No recent activity.')
+        self.assertContains(response, 'No recent activity recorded.')

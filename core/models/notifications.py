@@ -18,7 +18,14 @@ class SMTPSettings(models.Model):
 
     @classmethod
     def load(cls):
-        obj, created = cls.objects.get_or_create(pk=1)
+        obj, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'host': '',
+                'port': 587,
+                'sender_email': '',
+            }
+        )
         return obj
 
 class NotificationRecipient(models.Model):
