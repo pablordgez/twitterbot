@@ -1,10 +1,9 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.core import mail
 from core.models.notifications import SMTPSettings, NotificationRecipient
 from core.models.history import HistoryEvent
-from core.services.encryption import get_fernet_instance, encrypt, decrypt
+from core.services.encryption import encrypt, decrypt
 
 User = get_user_model()
 
@@ -30,14 +29,14 @@ class SMTPSettingsTests(TestCase):
         }
         response = self.client.post(reverse('core:smtp_settings'), data)
         self.assertRedirects(response, reverse('core:smtp_settings'))
-        
+
         self.settings.refresh_from_db()
         self.assertEqual(self.settings.host, 'smtp.example.com')
         self.assertEqual(self.settings.port, 587)
         self.assertEqual(self.settings.username, 'user@example.com')
         self.assertEqual(self.settings.sender_email, 'noreply@example.com')
         self.assertTrue(self.settings.use_tls)
-        
+
         # Verify password encryption
         self.assertIsNotNone(self.settings.encrypted_password)
         decrypted = decrypt(self.settings.encrypted_password)
@@ -49,7 +48,7 @@ class SMTPSettingsTests(TestCase):
     def test_save_smtp_settings_without_changing_password(self):
         self.settings.encrypted_password = encrypt('oldpassword')
         self.settings.save()
-        
+
         data = {
             'host': 'smtp.example.com',
             'port': 587,
@@ -60,11 +59,11 @@ class SMTPSettingsTests(TestCase):
         }
         response = self.client.post(reverse('core:smtp_settings'), data)
         self.assertRedirects(response, reverse('core:smtp_settings'))
-        
+
         self.settings.refresh_from_db()
         decrypted = decrypt(self.settings.encrypted_password)
         self.assertEqual(decrypted, 'oldpassword')
-        
+
         # No audit log if password not changed
         self.assertFalse(HistoryEvent.objects.filter(event_type='SMTP_SECRET_REPLACED').exists())
 
@@ -89,21 +88,21 @@ class SMTPSettingsTests(TestCase):
         self.settings.port = 1025
         self.settings.sender_email = 'sender@example.com'
         self.settings.save()
-        
+
         NotificationRecipient.objects.create(email='rcpt1@example.com')
         NotificationRecipient.objects.create(email='rcpt2@example.com')
-        
+
         # We need to mock EmailBackend or let it use the locmem backend.
         # By default in tests, Django uses locmem backend which intercepts send_mail.
         # But our view explicitly instantiates EmailBackend.
         # Let's patch the view's backend or just mock `send`.
-        
+
         from unittest.mock import patch
         with patch('django.core.mail.EmailMessage.send') as mock_send:
             response = self.client.post(reverse('core:smtp_test_email'))
             self.assertRedirects(response, reverse('core:smtp_settings'))
             self.assertTrue(mock_send.called)
-            
+
             self.assertTrue(HistoryEvent.objects.filter(event_type='TEST_POST_SUCCEEDED').exists())
 
     def test_test_email_fails(self):
@@ -111,7 +110,7 @@ class SMTPSettingsTests(TestCase):
         self.settings.sender_email = 'sender@example.com'
         self.settings.save()
         NotificationRecipient.objects.create(email='rcpt1@example.com')
-        
+
         from unittest.mock import patch
         with patch('django.core.mail.EmailMessage.send', side_effect=Exception('SMTP Error')):
             response = self.client.post(reverse('core:smtp_test_email'))

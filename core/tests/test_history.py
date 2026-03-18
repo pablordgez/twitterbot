@@ -4,7 +4,7 @@ from core.models.schedules import ScheduleSourceList
 from core.models.accounts import PostingAccount
 from core.models.schedules import Schedule
 from core.models.execution import Occurrence
-from core.services.history import log_event, redact_secrets, truncate_content_summary
+from core.services.history import log_event, truncate_content_summary
 from core.models.history import HistoryEvent
 
 
@@ -61,7 +61,7 @@ class HistoryServiceTest(TestCase):
     def test_truncate_content_summary(self):
         short_text = "Short text"
         self.assertEqual(truncate_content_summary(short_text), "Short text")
-        
+
         long_text = "a" * 150
         truncated = truncate_content_summary(long_text)
         self.assertEqual(len(truncated), 100)
@@ -79,7 +79,7 @@ class HistoryServiceTest(TestCase):
             occurrence=occurrence,
             correlation_id='corr-123'
         )
-        
+
         self.assertEqual(event.account, account)
         self.assertEqual(event.schedule, schedule)
         self.assertEqual(event.occurrence, occurrence)

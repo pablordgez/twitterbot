@@ -1,10 +1,6 @@
-import threading
 from django.test import TestCase, TransactionTestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from django.conf import settings
-from unittest.mock import patch
-from axes.models import AccessAttempt
 from core.models.history import HistoryEvent
 
 class FirstRunMiddlewareTests(TestCase):
@@ -39,7 +35,7 @@ class AuthViewsTests(TestCase):
         self.assertTrue(HistoryEvent.objects.filter(event_type='AUTH_SETUP_STARTED').exists())
         self.assertTrue(HistoryEvent.objects.filter(event_type='AUTH_SETUP_COMPLETED').exists())
         # Verify it logs in automatically or redirects
-        
+
     def test_setup_view_passwords_must_match(self):
         response = self.client.post(reverse('core:setup'), {
             'username': 'admin',
@@ -54,7 +50,7 @@ class AuthViewsTests(TestCase):
         # We need a session first to see if it rotates
         self.client.get(reverse('core:login'))
         old_session_key = self.client.session.session_key
-        
+
         response = self.client.post(reverse('core:login'), {
             'username': 'admin',
             'password': 'password'
@@ -86,7 +82,7 @@ class ThrottlingTests(TestCase):
                 'username': 'admin',
                 'password': 'wrongpassword'
             }, REMOTE_ADDR='127.0.0.1')
-        
+
         # 6th attempt should be locked out (429 Too Many Requests by default in recent axes)
         response = self.client.post(reverse('core:login'), {
             'username': 'admin',

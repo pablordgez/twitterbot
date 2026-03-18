@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.models.accounts import PostingAccount
-from core.models.schedules import Schedule, ScheduleTargetAccount, ScheduleSourceList
+from core.models.schedules import Schedule, ScheduleTargetAccount
 from core.models.tweets import TweetList
 from core.services.schedule_logic import (
     get_next_occurrence_time,

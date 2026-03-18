@@ -39,7 +39,7 @@ def _handle_failure(account: PostingAccount, attempt: OccurrenceAttempt):
         return
 
     state, _ = NotificationAccountState.objects.get_or_create(account=account)
-    
+
     should_send = False
     if mode == PostingAccount.NotificationMode.EVERY_FAILURE:
         should_send = True
@@ -108,7 +108,11 @@ def _send_failure_email(account: PostingAccount, attempt: OccurrenceAttempt) -> 
             connection=connection
         )
         email.send()
-        
+
+        if attempt:
+            attempt.notification_sent = True
+            attempt.save(update_fields=['notification_sent'])
+
         # Log successful notification sending
         log_event(
             event_type='NOTIFICATION_SENT',

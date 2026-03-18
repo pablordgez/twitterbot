@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models.history import HistoryEvent
@@ -22,15 +22,15 @@ class PasswordChangeTests(TestCase):
             'new_password1': self.new_password,
             'new_password2': self.new_password,
         }, follow=True)
-        
+
         self.assertRedirects(response, reverse('core:dashboard'))
         self.assertContains(response, 'Your password has been successfully changed.')
-        
+
         # Verify password actually changed
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(self.new_password))
         self.assertFalse(self.user.check_password(self.old_password))
-        
+
         # Verify history log
         self.assertTrue(HistoryEvent.objects.filter(
             event_type='AUTH_PASSWORD_CHANGED',
@@ -43,10 +43,10 @@ class PasswordChangeTests(TestCase):
             'new_password1': self.new_password,
             'new_password2': self.new_password,
         })
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Your old password was entered incorrectly. Please enter it again.')
-        
+
         # Verify password NOT changed
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(self.old_password))
@@ -57,11 +57,11 @@ class PasswordChangeTests(TestCase):
             'new_password1': self.new_password,
             'new_password2': 'different_password',
         })
-        
+
         self.assertEqual(response.status_code, 200)
         # Django's PasswordChangeForm raises __all__ error for mismatch
         self.assertContains(response, 'The two password fields didn’t match.')
-        
+
         # Verify password NOT changed
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(self.old_password))
@@ -74,7 +74,7 @@ class PasswordChangeTests(TestCase):
             'new_password1': self.new_password,
             'new_password2': self.new_password,
         })
-        
+
         # Check if user is still logged in
         self.assertTrue('_auth_user_id' in self.client.session)
         self.assertEqual(int(self.client.session['_auth_user_id']), self.user.pk)

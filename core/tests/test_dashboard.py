@@ -16,7 +16,7 @@ class DashboardViewTest(TestCase):
             'username': 'admin',
             'password': 'password'
         })
-        
+
         # Create some data
         self.account = PostingAccount.objects.create(name='Test Account')
         self.schedule = Schedule.objects.create(

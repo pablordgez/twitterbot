@@ -27,18 +27,18 @@ class NFRDisplayTest(TestCase):
             interval_type='day',
             interval_value=1
         )
-        
+
         response = self.client.get(reverse('core:schedule_list'))
         self.assertEqual(response.status_code, 200)
-        
+
         # NFR-1: One-time vs Recurring badges
         self.assertContains(response, 'One-Time')
         self.assertContains(response, 'Recurring')
-        
+
         # NFR-2: Timezone indicator
         self.assertContains(response, 'Europe/Madrid')
         self.assertContains(response, 'UTC')
-        
+
         # NFR-4: Fixed vs Random badges
         self.assertContains(response, 'Fixed (New)')
         self.assertContains(response, 'Random (From List)')
@@ -48,14 +48,14 @@ class NFRDisplayTest(TestCase):
         # Setup account secrets to show the test post section
         from core.models.accounts import PostingAccountSecret
         PostingAccountSecret.objects.create(
-            account=self.account, 
+            account=self.account,
             encrypted_data=b"dummy",
             field_hash="dummy_hash"
         )
-        
+
         response = self.client.get(reverse('core:account_detail', args=[self.account.pk]))
         self.assertEqual(response.status_code, 200)
-        
+
         # NFR-6: Communication of 'test' text
         self.assertContains(response, "REAL POST to X/Twitter with the exact text: test")
         self.assertContains(response, "This will post <code>test</code> to your account immediately.")
@@ -78,10 +78,10 @@ class NFRDisplayTest(TestCase):
             status='pending',
             schedule_version=1
         )
-        
+
         response = self.client.get(reverse('core:upcoming_list'))
         self.assertEqual(response.status_code, 200)
-        
+
         # Verify consistent badges
         self.assertContains(response, 'One-Time')
         self.assertContains(response, 'Fixed (New)')

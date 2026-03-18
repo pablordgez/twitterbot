@@ -31,12 +31,12 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
     path('password-change/', PasswordChangeView.as_view(), name='password_change'),
-    
+
     path('settings/smtp/', SMTPSettingsView.as_view(), name='smtp_settings'),
     path('settings/recipients/add/', RecipientCreateView.as_view(), name='recipient_add'),
     path('settings/recipients/<int:pk>/delete/', RecipientDeleteView.as_view(), name='recipient_delete'),
     path('settings/smtp/test/', TestEmailView.as_view(), name='smtp_test_email'),
-    
+
     path('accounts/', AccountListView.as_view(), name='account_list'),
     path('accounts/create/', AccountCreateView.as_view(), name='account_create'),
     path('accounts/<int:pk>/', AccountDetailView.as_view(), name='account_detail'),

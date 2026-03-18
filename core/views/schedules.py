@@ -7,9 +7,8 @@ conditional field toggling on the schedule form.
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -66,7 +65,7 @@ class ScheduleCreateView(LoginRequiredMixin, CreateView):
                 ScheduleSourceList.objects.create(
                     schedule=self.object, tweet_list=tweet_list,
                 )
-            
+
             # Generate future occurrences
             materialize_for_schedule(self.object)
 
@@ -163,19 +162,19 @@ class ScheduleCancelView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         schedule = get_object_or_404(Schedule, pk=pk)
-        
+
         with transaction.atomic():
             # 1. Update schedule status
             schedule.status = 'canceled'
             schedule.save(update_fields=['status', 'updated_at'])
-            
+
             # 2. Bulk cancel all pending occurrences
             schedule.occurrences.filter(status='pending').update(
                 status='canceled',
                 cancel_reason='schedule_canceled',
                 updated_at=timezone.now()
             )
-            
+
             # 3. Log audit event
             log_event(
                 event_type='SCHEDULE_CANCELED',
@@ -184,7 +183,7 @@ class ScheduleCancelView(LoginRequiredMixin, View):
                 detail={'reason': 'schedule_canceled'},
                 correlation_id=f"schedule:{schedule.id}",
             )
-            
+
         messages.success(request, 'Schedule and all future occurrences canceled.')
         return redirect('core:schedule_list')
 

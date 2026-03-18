@@ -27,7 +27,7 @@ class TweetEntryForm(forms.ModelForm):
         cleaned_data = super().clean()
         text = cleaned_data.get('text')
         tweet_list = getattr(self, 'tweet_list', None)
-        
+
         if text and tweet_list:
             # Check for duplicates in the same list
             is_duplicate = TweetEntry.objects.filter(list=tweet_list, text=text).exists()
@@ -35,5 +35,5 @@ class TweetEntryForm(forms.ModelForm):
                 # We add a custom attribute to indicate a duplicate was found
                 # The view can then decide how to handle the warning
                 self.is_duplicate = True
-        
+
         return cleaned_data

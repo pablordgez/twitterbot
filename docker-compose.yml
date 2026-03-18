@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: twitterbot:latest
+    container_name: twitterbot
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - APP_SECRET_KEY=${APP_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - app_data:/app/data
+
+volumes:
+  app_data:

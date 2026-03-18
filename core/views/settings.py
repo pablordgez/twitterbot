@@ -28,10 +28,10 @@ class SMTPSettingsView(LoginRequiredMixin, FormView):
         password_changed = bool(form.cleaned_data.get('password'))
         form.save()
         messages.success(self.request, "SMTP settings updated successfully.")
-        
+
         if password_changed:
             log_event('SMTP_SECRET_REPLACED', detail="SMTP password was updated.")
-            
+
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -48,7 +48,7 @@ class RecipientCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         messages.success(self.request, "Recipient added successfully.")
         return super().form_valid(form)
-    
+
     def form_invalid(self, form):
         for field, errors in form.errors.items():
             for error in errors:
@@ -67,15 +67,15 @@ class TestEmailView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         settings_obj = SMTPSettings.load()
         recipients = list(NotificationRecipient.objects.values_list('email', flat=True))
-        
+
         if not recipients:
             messages.error(request, "No recipients configured to receive the test email.")
             return redirect('core:smtp_settings')
-            
+
         if not settings_obj.host or not settings_obj.sender_email:
             messages.error(request, "SMTP settings are incomplete. Please configure host and sender email.")
             return redirect('core:smtp_settings')
-        
+
         try:
             password = decrypt(settings_obj.encrypted_password) if settings_obj.encrypted_password else ''
             backend = EmailBackend(
@@ -92,7 +92,7 @@ class TestEmailView(LoginRequiredMixin, View):
             # Let's map model.use_tls to use_ssl, and model.use_starttls to use_tls.
             backend.use_ssl = settings_obj.use_tls
             backend.use_tls = settings_obj.use_starttls
-            
+
             msg = EmailMessage(
                 subject="Test Email from TwitterBot",
                 body="This is a test email. Your SMTP configuration is working correctly.",
@@ -107,5 +107,5 @@ class TestEmailView(LoginRequiredMixin, View):
         except Exception as e:
             messages.error(request, f"Failed to send test email: {str(e)}")
             log_event('TEST_POST_FAILED', detail=f"SMTP test email failed: {str(e)}")
-            
+
         return redirect('core:smtp_settings')

@@ -36,16 +36,16 @@ def parse_curl_command(curl_text: str) -> Dict[str, Any]:
     """
     if len(curl_text) > 50 * 1024:
         raise CurlParseError("Input exceeds 50KB limit")
-    
+
     if curl_text.count('\n') > 500:
         raise CurlParseError("Input exceeds 500 lines limit")
-    
+
     # We will accumulate the extracted data here
     extracted = {
         'headers': {},
         'cookies': {}
     }
-    
+
     # Extract headers. E.g., -H 'authorization: Bearer XYZ'
     # Pattern looks for -H or --header, followed by spaces, an optional quote, and the content.
     header_pattern = re.compile(r'(?i)(?:-H|--header)\s+(["\'])(.*?)\1')
@@ -65,14 +65,14 @@ def parse_curl_command(curl_text: str) -> Dict[str, Any]:
     for match in cookie_pattern.finditer(curl_text):
         cookie_str = match.group(2)
         _parse_cookie_string(cookie_str, extracted['cookies'])
-    
+
     # Extract queryId from URL
     # Look for /i/api/graphql/<queryId>/CreateTweet
     url_pattern = re.compile(r'/i/api/graphql/([^/]+)/CreateTweet')
     url_match = url_pattern.search(curl_text)
     if url_match:
         extracted['queryId'] = url_match.group(1)
-        
+
     # Validation against required fields
     missing = []
     for req in REQUIRED_FIELDS:
@@ -85,10 +85,10 @@ def parse_curl_command(curl_text: str) -> Dict[str, Any]:
         elif req in ['authorization', 'x-csrf-token']:
             if req not in extracted['headers']:
                 missing.append(req)
-                
+
     if missing:
         raise CurlParseError(f"Missing required fields: {', '.join(missing)}")
-        
+
     return extracted
 
 def _parse_cookie_string(cookie_str: str, target_dict: dict):

@@ -1,10 +1,8 @@
 import json
 import logging
 import requests
-from django.db import transaction
-from django.core.exceptions import ValidationError
 
-from core.models.accounts import PostingAccount, PostingAccountSecret
+from core.models.accounts import PostingAccount
 from core.models.execution import OccurrenceAttempt, Occurrence, RecurringUsageState
 from core.models.schedules import Schedule
 from core.services.encryption import decrypt
@@ -114,7 +112,7 @@ def execute_attempt(attempt: OccurrenceAttempt):
     try:
         decrypted_json = decrypt(account.secret.encrypted_data)
         secret_data = json.loads(decrypted_json)
-    except Exception as e:
+    except Exception:
         _fail_attempt(attempt, "validation_failed", "Secrets decryptable check failed")
         return
 
@@ -128,7 +126,7 @@ def execute_attempt(attempt: OccurrenceAttempt):
         attempt.post_result = OccurrenceAttempt.PostResult.SUCCESS
         attempt.external_response_meta = response_meta
         attempt.save(update_fields=['post_result', 'external_response_meta'])
-        
+
         if occurrence.schedule.schedule_type == Schedule.ScheduleType.RECURRING and not occurrence.schedule.reuse_enabled:
             if attempt.resolved_tweet_entry_id:
                 RecurringUsageState.objects.get_or_create(
@@ -150,7 +148,7 @@ def execute_attempt(attempt: OccurrenceAttempt):
         attempt.post_result = OccurrenceAttempt.PostResult.FAILED
         attempt.error_detail = _redact_error(error_detail)
         attempt.save(update_fields=['post_result', 'error_detail'])
-        
+
         log_event(
             event_type='POST_ATTEMPT_FAILED',
             account=account,
@@ -184,10 +182,10 @@ def execute_test_post(account: PostingAccount, content: str = 'test') -> tuple[b
         return False, "Secrets decryptable check failed"
 
     success, error_detail, _ = _execute_post(content, secret_data)
-    
+
     if not success:
         error_detail = _redact_error(error_detail)
-        
+
     return success, error_detail
 
 def _execute_post(content: str, secret_data: dict) -> tuple[bool, str, dict]:
@@ -203,7 +201,7 @@ def _execute_post(content: str, secret_data: dict) -> tuple[bool, str, dict]:
         return False, "Missing queryId in secrets", {}
 
     url = f"https://x.com/i/api/graphql/{query_id}/CreateTweet"
-    
+
     # Merge hardcoded headers into secret headers
     merged_headers = {**headers, **HARDCODED_HEADERS}
 
@@ -235,19 +233,19 @@ def _execute_post(content: str, secret_data: dict) -> tuple[bool, str, dict]:
             timeout=30
         )
         response.raise_for_status()
-        
+
         data = response.json()
-        
+
         # X GraphQL API can return HTTP 200 with logical errors
         if 'errors' in data and data['errors']:
             err_msgs = [e.get('message', 'Unknown GraphQL Error') for e in data['errors']]
             return False, f"GraphQL Error: {', '.join(err_msgs)}", {}
-            
+
         return True, "", {"status_code": response.status_code}
-        
+
     except requests.exceptions.RequestException as e:
         return False, str(e), {}
-    except ValueError as e: # JSON decode error
+    except ValueError: # JSON decode error
         return False, "Invalid JSON response from server format", {}
 
 def _fail_attempt(attempt: OccurrenceAttempt, result: str, detail: str):
@@ -255,7 +253,7 @@ def _fail_attempt(attempt: OccurrenceAttempt, result: str, detail: str):
     attempt.validation_ok = False
     attempt.error_detail = detail
     attempt.save(update_fields=['post_result', 'validation_ok', 'error_detail'])
-    
+
     log_event(
         event_type='POST_ATTEMPT_FAILED',
         account=attempt.target_account,
@@ -275,10 +273,10 @@ def _redact_error(error_str: str) -> str:
     """
     if not error_str:
         return ""
-    
+
     # Redact potential keys (like bearer token, csrf, auth_token, queryId)
-    # Simple redaction logic: truncate excessively long string segments 
-    # and remove the common host string partially just in case, though 
+    # Simple redaction logic: truncate excessively long string segments
+    # and remove the common host string partially just in case, though
     # the requirements say "Strip any secrets from error details before storage".
     # Typically requests.exceptions includes the URL.
     import re
@@ -288,5 +286,5 @@ def _redact_error(error_str: str) -> str:
     # But be careful not to redact normal error words.
     # tokens are usually >= 32 chars
     error_str = re.sub(r'\b[A-Za-z0-9_-]{32,}\b', '[REDACTED]', error_str)
-    
+
     return error_str

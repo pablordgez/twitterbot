@@ -13,9 +13,9 @@ class FirstRunMiddleware:
             '/static/',
             reverse('health_check'),
         ]
-        
+
         if not any(request.path.startswith(path) for path in excluded_paths):
             if not User.objects.exists():
                 return redirect('core:setup')
-        
+
         return self.get_response(request)

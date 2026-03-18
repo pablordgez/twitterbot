@@ -1,0 +1,60 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run Ruff Linting
+      run: |
+        ruff check .
+        
+    - name: Run Django Tests
+      env:
+        APP_SECRET_KEY: test-secret-key-12345
+        ENCRYPTION_KEY: EmjUgOkbw1cbh3eHw3fuhLBggg_tVsZZRbDqDDnzowk=
+        ALLOWED_HOSTS: localhost
+      run: |
+        python manage.py test
+        
+    - name: Run pip-audit
+      run: |
+        pip-audit -r requirements.txt
+
+  build-docker:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: twitterbot:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

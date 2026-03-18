@@ -11,7 +11,7 @@ class SMTPSettings(models.Model):
     use_tls = models.BooleanField(default=True)
     use_starttls = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def save(self, *args, **kwargs):
         self.pk = 1
         super().save(*args, **kwargs)

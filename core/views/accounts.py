@@ -41,7 +41,7 @@ class AccountUpdateView(LoginRequiredMixin, UpdateView):
     model = PostingAccount
     form_class = PostingAccountForm
     template_name = 'accounts/form.html'
-    
+
     def get_success_url(self):
         return reverse('core:account_detail', kwargs={'pk': self.object.pk})
 
@@ -76,12 +76,12 @@ class AccountCurlImportView(LoginRequiredMixin, View):
 
         if form.is_valid():
             parsed_data = form.cleaned_data['curl_text']
-            
+
             # Encrypt and save secret
             json_dump = json.dumps(parsed_data)
             encrypted = encrypt(json_dump)
             field_hash = hashlib.sha256(json_dump.encode('utf-8')).hexdigest()
-            
+
             with transaction.atomic():
                 is_replacement = hasattr(account, 'secret')
                 PostingAccountSecret.objects.update_or_create(
@@ -125,10 +125,10 @@ class AccountTestPostView(LoginRequiredMixin, View):
             result_status='confirmed',
             correlation_id=correlation_id,
         )
-        
+
         from core.services.posting_executor import execute_test_post
         success, error_detail = execute_test_post(account, content='test')
-        
+
         log_event(
             event_type='TEST_POST_SUCCEEDED' if success else 'TEST_POST_FAILED',
             account=account,

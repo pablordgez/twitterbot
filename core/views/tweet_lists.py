@@ -1,13 +1,12 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Count
 
 from ..models.tweets import TweetList, TweetEntry
-from ..models.schedules import ScheduleSourceList
 from ..services.history import log_event
 from ..forms.tweet_lists import TweetListForm
 from ..forms.tweet_entries import TweetEntryForm
@@ -17,7 +16,7 @@ class TweetListListView(LoginRequiredMixin, ListView):
     model = TweetList
     template_name = 'tweets/list_index.html'
     context_object_name = 'tweet_lists'
-    
+
     def get_queryset(self):
         return TweetList.objects.annotate(entry_count=Count('entries')).order_by('-created_at')
 

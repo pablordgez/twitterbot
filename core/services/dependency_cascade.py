@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.models.execution import Occurrence
-from core.models.schedules import Schedule, ScheduleSourceList, ScheduleTargetAccount
+from core.models.schedules import Schedule
 from core.services.history import log_event
 
 

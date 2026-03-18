@@ -32,7 +32,7 @@ class HistoryListView(LoginRequiredMixin, ListView):
                     Q(content_summary__icontains=search_query) |
                     Q(event_type__icontains=search_query)
                 )
-                
+
                 # Cannot simply do detail__icontains on JSONField with SQLite using older Django in a way that is universally supported.
                 # However, since we are using Django 5.x on SQLite, it provides JSON1 extension out of the box, but we might want to just text search it
                 # if we treat JSON as string or ignore JSON body for search to avoid DB error. I'll add search over correlation_id instead of JSON details.
