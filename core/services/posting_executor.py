@@ -6,7 +6,7 @@ from core.models.accounts import PostingAccount
 from core.models.execution import OccurrenceAttempt, Occurrence, RecurringUsageState
 from core.models.schedules import Schedule
 from core.services.encryption import decrypt
-from core.services.history import log_event
+from core.services.history import log_event, redact_secrets
 from core.services.content_resolver import resolve_content_for_occurrence
 from core.services.notification_engine import handle_posting_result
 
@@ -41,6 +41,26 @@ FEATURES_PAYLOAD = {
 
 def _attempt_correlation_id(attempt: OccurrenceAttempt) -> str:
     return f"occurrence:{attempt.occurrence_id}:account:{attempt.target_account_id}"
+
+
+def _truncate_log_value(value, *, limit=1000):
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=True, sort_keys=True)
+    if len(text) > limit:
+        return text[: limit - 3] + "..."
+    return text
+
+
+def _log_create_tweet_response(status_code: int, data, *, success: bool, error_detail: str = ""):
+    sanitized_body = _truncate_log_value(redact_secrets(data))
+    if success:
+        logger.info("CreateTweet succeeded: status=%s body=%s", status_code, sanitized_body)
+    else:
+        logger.warning(
+            "CreateTweet failed: status=%s error=%s body=%s",
+            status_code,
+            _truncate_log_value(_redact_error(error_detail), limit=300),
+            sanitized_body,
+        )
 
 def execute_occurrence_attempts(occurrence_id: int):
     """
@@ -236,16 +256,19 @@ def _execute_post(content: str, secret_data: dict) -> tuple[bool, str, dict]:
 
         data = response.json()
 
-        # X GraphQL API can return HTTP 200 with logical errors
-        if 'errors' in data and data['errors']:
-            err_msgs = [e.get('message', 'Unknown GraphQL Error') for e in data['errors']]
-            return False, f"GraphQL Error: {', '.join(err_msgs)}", {}
+        success, error_detail = _interpret_create_tweet_response(data)
+        if not success:
+            _log_create_tweet_response(response.status_code, data, success=False, error_detail=error_detail)
+            return False, error_detail, {"status_code": response.status_code}
 
+        _log_create_tweet_response(response.status_code, data, success=True)
         return True, "", {"status_code": response.status_code}
 
     except requests.exceptions.RequestException as e:
+        logger.warning("CreateTweet request exception: %s", _truncate_log_value(_redact_error(str(e)), limit=300))
         return False, str(e), {}
     except ValueError: # JSON decode error
+        logger.warning("CreateTweet failed: status=%s invalid_json_response", response.status_code)
         return False, "Invalid JSON response from server format", {}
 
 def _fail_attempt(attempt: OccurrenceAttempt, result: str, detail: str):
@@ -288,3 +311,39 @@ def _redact_error(error_str: str) -> str:
     error_str = re.sub(r'\b[A-Za-z0-9_-]{32,}\b', '[REDACTED]', error_str)
 
     return error_str
+
+
+def _interpret_create_tweet_response(data: dict) -> tuple[bool, str]:
+    """
+    X can return HTTP 200 while still rejecting the mutation at the GraphQL layer.
+    Treat the response as success only when it contains a concrete tweet identifier.
+    """
+    if not isinstance(data, dict):
+        return False, "Unexpected response format from server"
+
+    errors = data.get('errors')
+    if isinstance(errors, list) and errors:
+        err_msgs = [e.get('message', 'Unknown GraphQL Error') for e in errors if isinstance(e, dict)]
+        return False, f"GraphQL Error: {', '.join(err_msgs) or 'Unknown GraphQL Error'}"
+
+    result = (
+        data.get('data', {})
+        .get('create_tweet', {})
+        .get('tweet_results', {})
+        .get('result', {})
+    )
+
+    if not isinstance(result, dict):
+        return False, "CreateTweet response missing result payload"
+
+    rest_id = result.get('rest_id')
+    legacy_id = result.get('legacy', {}).get('id_str') if isinstance(result.get('legacy'), dict) else None
+    typename = result.get('__typename')
+
+    if rest_id or legacy_id:
+        return True, ""
+
+    if typename:
+        return False, f"CreateTweet returned {typename} without a tweet id"
+
+    return False, "CreateTweet response missing tweet id"

@@ -125,7 +125,9 @@ class PostingExecutorTests(TestCase):
         # Simulate success
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"data": {"tweet": "ok"}}
+        mock_response.json.return_value = {
+            "data": {"create_tweet": {"tweet_results": {"result": {"rest_id": "123"}}}}
+        }
         mock_post.return_value = mock_response
 
         success, error = execute_test_post(self.account, "Test tweet")
@@ -158,7 +160,9 @@ class PostingExecutorTests(TestCase):
             else:
                 resp = MagicMock()
                 resp.status_code = 200
-                resp.json.return_value = {}
+                resp.json.return_value = {
+                    "data": {"create_tweet": {"tweet_results": {"result": {"rest_id": "456"}}}}
+                }
                 return resp
 
         mock_post.side_effect = side_effect
@@ -171,3 +175,33 @@ class PostingExecutorTests(TestCase):
 
         self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.FAILED)
         self.assertEqual(attempt2.post_result, OccurrenceAttempt.PostResult.SUCCESS)
+
+    @patch('core.services.posting_executor.requests.post')
+    def test_200_response_with_graphql_errors_is_failure(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "errors": [{"message": "User is not allowed to create a Tweet"}]
+        }
+        mock_post.return_value = mock_response
+
+        execute_attempt(self.attempt)
+
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.FAILED)
+        self.assertIn("GraphQL Error", self.attempt.error_detail)
+
+    @patch('core.services.posting_executor.requests.post')
+    def test_200_response_without_tweet_id_is_failure(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {"create_tweet": {"tweet_results": {"result": {"__typename": "CreateTweetError"}}}}
+        }
+        mock_post.return_value = mock_response
+
+        execute_attempt(self.attempt)
+
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.FAILED)
+        self.assertIn("CreateTweetError", self.attempt.error_detail)
