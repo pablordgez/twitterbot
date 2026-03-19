@@ -1,34 +1,27 @@
 {% extends "base.html" %}
 
+{% block page_title %}Account: {{ account.name }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:account_update' account.pk %}" class="btn btn-secondary">
+    Edit Settings
+</a>
+<a href="{% url 'core:account_delete' account.pk %}" class="btn btn-danger">
+    Delete
+</a>
+{% endblock %}
+
 {% block content %}
 <div class="container-xl">
-    <div class="page-header d-print-none">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <h2 class="page-title">
-                    Account: {{ account.name }}
-                </h2>
-                <div class="text-muted mt-1">
-                    Added {{ account.created_at|date:"Y-m-d H:i" }} &bull;
-                    {% if account.is_active %}
-                        <span class="text-success">&bull; Active</span>
-                    {% else %}
-                        <span class="text-secondary">&bull; Inactive</span>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="col-auto ms-auto d-print-none">
-                <a href="{% url 'core:account_update' account.pk %}" class="btn btn-secondary">
-                    Edit Settings
-                </a>
-                <a href="{% url 'core:account_delete' account.pk %}" class="btn btn-danger">
-                    Delete
-                </a>
-            </div>
-        </div>
-    </div>
-
     <div class="page-body">
+        <div class="mb-3 text-muted">
+            Added {{ account.created_at|date:"Y-m-d H:i" }} &bull;
+            {% if account.is_active %}
+                <span class="text-success">&bull; Active</span>
+            {% else %}
+                <span class="text-secondary">&bull; Inactive</span>
+            {% endif %}
+        </div>
         <div class="row row-cards">
             
             <!-- Left col: Credentials & Import -->

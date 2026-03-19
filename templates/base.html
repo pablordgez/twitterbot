@@ -22,7 +22,6 @@
     </style>
   </head>
   <body class="layout-fluid">
-    <script src="{% static 'vendor/tabler/tabler.min.js' %}"></script>
     <div class="page">
       <!-- Sidebar / Topbar depending on preference, Tabler usually uses a topbar or sidebar -->
       <header class="navbar navbar-expand-md d-print-none" >
@@ -66,6 +65,7 @@
                     <span class="nav-link-title">Dashboard</span>
                   </a>
                 </li>
+                <li class="nav-item">
                   <a class="nav-link" href="{% url 'core:account_list' %}">
                     <span class="nav-link-title">Accounts</span>
                   </a>
@@ -76,7 +76,7 @@
                   </a>
                 </li>
                 <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle" href="#navbar-schedules" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" >
+                  <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false">
                     <span class="nav-link-title">Schedules</span>
                   </a>
                   <div class="dropdown-menu">
@@ -87,7 +87,7 @@
                   </div>
                 </li>
                 <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle" href="#navbar-settings" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" >
+                  <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false">
                     <span class="nav-link-title">Settings</span>
                   </a>
                   <div class="dropdown-menu">

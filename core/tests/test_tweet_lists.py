@@ -21,6 +21,14 @@ class TweetListTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test List")
+        self.assertContains(response, reverse('core:csv_import_general'))
+        self.assertContains(response, reverse('core:csv_import', kwargs={'list_pk': self.tweet_list.pk}))
+
+    def test_tweet_list_detail_shows_csv_import_link(self):
+        url = reverse('core:tweet_list_detail', kwargs={'pk': self.tweet_list.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('core:csv_import', kwargs={'list_pk': self.tweet_list.pk}))
 
     def test_tweet_list_create(self):
         url = reverse('core:tweet_list_create')

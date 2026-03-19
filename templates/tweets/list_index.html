@@ -1,21 +1,19 @@
 {% extends "base.html" %}
 
+{% block page_title %}Tweet Lists{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:csv_import_general' %}" class="btn btn-outline-primary">
+    Import CSV
+</a>
+<a href="{% url 'core:tweet_list_create' %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+    New List
+</a>
+{% endblock %}
+
 {% block content %}
 <div class="container-xl">
-    <div class="page-header d-print-none">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <h2 class="page-title">Tweet Lists</h2>
-            </div>
-            <div class="col-auto ms-auto d-print-none">
-                <a href="{% url 'core:tweet_list_create' %}" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                    New List
-                </a>
-            </div>
-        </div>
-    </div>
-
     <div class="page-body">
         <div class="card">
             <div class="table-responsive">
@@ -39,6 +37,7 @@
                             <td class="text-end text-nowrap">
                                 <div class="btn-list flex-nowrap">
                                     <a href="{% url 'core:tweet_list_detail' list.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{% url 'core:csv_import' list.pk %}" class="btn btn-sm btn-outline-primary">Import CSV</a>
                                     <a href="{% url 'core:tweet_list_update' list.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                     <a href="{% url 'core:tweet_list_delete' list.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                                 </div>

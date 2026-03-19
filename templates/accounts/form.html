@@ -1,22 +1,15 @@
 {% extends "base.html" %}
 
+{% block page_title %}{% if object %}Edit Account: {{ object.name }}{% else %}New Account{% endif %}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:account_list' %}" class="btn btn-secondary">
+    Cancel
+</a>
+{% endblock %}
+
 {% block content %}
 <div class="container-xl">
-    <div class="page-header d-print-none">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <h2 class="page-title">
-                    {% if object %}Edit Account: {{ object.name }}{% else %}New Account{% endif %}
-                </h2>
-            </div>
-            <div class="col-auto ms-auto d-print-none">
-                <a href="{% url 'core:account_list' %}" class="btn btn-secondary">
-                    Cancel
-                </a>
-            </div>
-        </div>
-    </div>
-
     <div class="page-body">
         <div class="row">
             <div class="col-md-6">

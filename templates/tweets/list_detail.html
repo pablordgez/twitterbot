@@ -1,36 +1,28 @@
 {% extends "base.html" %}
 
 {% block title %}{{ tweet_list.name }} - Tweet List{% endblock %}
+{% block page_title %}Tweet List: {{ tweet_list.name }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:csv_import' tweet_list.pk %}" class="btn btn-outline-primary d-none d-sm-inline-block">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1 -1v-2" /><path d="M7 9l5 -5l5 5" /><path d="M12 4l0 12" /></svg>
+    Import CSV
+</a>
+<a href="{% url 'core:tweet_list_update' tweet_list.pk %}" class="btn btn-primary d-none d-sm-inline-block">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+    Edit List
+</a>
+<a href="{% url 'core:tweet_list_list' %}" class="btn btn-link">
+    Back to Index
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="page-header d-print-none">
-    <div class="container-xl">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <h2 class="page-title">
-                    Tweet List: {{ tweet_list.name }}
-                </h2>
-                <div class="text-muted mt-1">
-                    {{ entries.count }} entries
-                </div>
-            </div>
-            <div class="col-auto ms-auto d-print-none">
-                <div class="btn-list">
-                    <a href="{% url 'core:tweet_list_update' tweet_list.pk %}" class="btn btn-primary d-none d-sm-inline-block">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
-                        Edit List
-                    </a>
-                    <a href="{% url 'core:tweet_list_list' %}" class="btn btn-link">
-                        Back to Index
-                    </a>
-                </div>
-            </div>
+<div class="container-xl">
+    <div class="page-body">
+        <div class="mb-3 text-muted">
+            {{ entries.count }} entries
         </div>
-    </div>
-</div>
-
-<div class="page-body">
-    <div class="container-xl">
         <div class="row row-cards">
             <div class="col-12">
                 <div class="card">
