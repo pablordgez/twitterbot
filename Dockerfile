@@ -24,12 +24,13 @@ WORKDIR /app
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=twitterbot.settings
+    DJANGO_SETTINGS_MODULE=twitterbot.settings \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Create a non-root user and set up directories
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
-    mkdir -p /app/data /app/staticfiles && \
-    chown -R appuser:appgroup /app/data /app/staticfiles
+    mkdir -p /app/data /app/staticfiles /ms-playwright && \
+    chown -R appuser:appgroup /app/data /app/staticfiles /ms-playwright
 
 # Install the wheels from the builder stage
 COPY --from=builder /build/wheels /wheels
