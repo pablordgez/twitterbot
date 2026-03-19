@@ -5,10 +5,12 @@ import requests
 from core.models.accounts import PostingAccount
 from core.models.execution import OccurrenceAttempt, Occurrence, RecurringUsageState
 from core.models.schedules import Schedule
+from core.services.browser_posting import execute_browser_post
 from core.services.encryption import decrypt
 from core.services.history import log_event, redact_secrets
 from core.services.content_resolver import resolve_content_for_occurrence
 from core.services.notification_engine import handle_posting_result
+from core.services.x_response_parser import interpret_create_tweet_response
 
 logger = logging.getLogger(__name__)
 
@@ -125,22 +127,32 @@ def execute_attempt(attempt: OccurrenceAttempt):
         _fail_attempt(attempt, "validation_failed", "Tweet length invalid")
         return
 
-    if not hasattr(account, 'secret'):
-        _fail_attempt(attempt, "validation_failed", "Account missing secrets")
-        return
-
-    try:
-        decrypted_json = decrypt(account.secret.encrypted_data)
-        secret_data = json.loads(decrypted_json)
-    except Exception:
-        _fail_attempt(attempt, "validation_failed", "Secrets decryptable check failed")
-        return
+    if account.auth_mode == PostingAccount.AuthMode.BROWSER:
+        if not hasattr(account, 'browser_credential'):
+            _fail_attempt(attempt, "validation_failed", "Account missing browser credentials")
+            return
+        try:
+            decrypt(account.browser_credential.encrypted_username)
+            decrypt(account.browser_credential.encrypted_password)
+        except Exception:
+            _fail_attempt(attempt, "validation_failed", "Browser credentials decryptable check failed")
+            return
+    else:
+        if not hasattr(account, 'secret'):
+            _fail_attempt(attempt, "validation_failed", "Account missing request secrets")
+            return
+        try:
+            decrypted_json = decrypt(account.secret.encrypted_data)
+            json.loads(decrypted_json)
+        except Exception:
+            _fail_attempt(attempt, "validation_failed", "Request secrets decryptable check failed")
+            return
 
     # Validation passed
     attempt.validation_ok = True
     attempt.save(update_fields=['validation_ok'])
 
-    success, error_detail, response_meta = _execute_post(content, secret_data)
+    success, error_detail, response_meta = _execute_post_for_account(account, content)
 
     if success:
         attempt.post_result = OccurrenceAttempt.PostResult.SUCCESS
@@ -167,7 +179,8 @@ def execute_attempt(attempt: OccurrenceAttempt):
     else:
         attempt.post_result = OccurrenceAttempt.PostResult.FAILED
         attempt.error_detail = _redact_error(error_detail)
-        attempt.save(update_fields=['post_result', 'error_detail'])
+        attempt.external_response_meta = response_meta
+        attempt.save(update_fields=['post_result', 'error_detail', 'external_response_meta'])
 
         log_event(
             event_type='POST_ATTEMPT_FAILED',
@@ -192,21 +205,45 @@ def execute_test_post(account: PostingAccount, content: str = 'test') -> tuple[b
     if not content or len(content) > 280:
         return False, "Tweet length invalid"
 
-    if not hasattr(account, 'secret'):
-        return False, "Account missing secrets"
+    if account.auth_mode == PostingAccount.AuthMode.BROWSER:
+        if not hasattr(account, 'browser_credential'):
+            return False, "Account missing browser credentials"
+        try:
+            decrypt(account.browser_credential.encrypted_username)
+            decrypt(account.browser_credential.encrypted_password)
+        except Exception:
+            return False, "Browser credentials decryptable check failed"
+    else:
+        if not hasattr(account, 'secret'):
+            return False, "Account missing request secrets"
+        try:
+            decrypted_json = decrypt(account.secret.encrypted_data)
+            json.loads(decrypted_json)
+        except Exception:
+            return False, "Request secrets decryptable check failed"
 
-    try:
-        decrypted_json = decrypt(account.secret.encrypted_data)
-        secret_data = json.loads(decrypted_json)
-    except Exception:
-        return False, "Secrets decryptable check failed"
-
-    success, error_detail, _ = _execute_post(content, secret_data)
+    success, error_detail, _ = _execute_post_for_account(account, content)
 
     if not success:
         error_detail = _redact_error(error_detail)
 
     return success, error_detail
+
+
+def _execute_post_for_account(account: PostingAccount, content: str) -> tuple[bool, str, dict]:
+    if account.auth_mode == PostingAccount.AuthMode.BROWSER:
+        return execute_browser_post(account, content)
+
+    if not hasattr(account, 'secret'):
+        return False, "Account missing request secrets", {}
+
+    try:
+        decrypted_json = decrypt(account.secret.encrypted_data)
+        secret_data = json.loads(decrypted_json)
+    except Exception:
+        return False, "Request secrets decryptable check failed", {}
+
+    return _execute_post(content, secret_data)
 
 def _execute_post(content: str, secret_data: dict) -> tuple[bool, str, dict]:
     """
@@ -256,7 +293,7 @@ def _execute_post(content: str, secret_data: dict) -> tuple[bool, str, dict]:
 
         data = response.json()
 
-        success, error_detail = _interpret_create_tweet_response(data)
+        success, error_detail = interpret_create_tweet_response(data)
         if not success:
             _log_create_tweet_response(response.status_code, data, success=False, error_detail=error_detail)
             return False, error_detail, {"status_code": response.status_code}
@@ -311,39 +348,3 @@ def _redact_error(error_str: str) -> str:
     error_str = re.sub(r'\b[A-Za-z0-9_-]{32,}\b', '[REDACTED]', error_str)
 
     return error_str
-
-
-def _interpret_create_tweet_response(data: dict) -> tuple[bool, str]:
-    """
-    X can return HTTP 200 while still rejecting the mutation at the GraphQL layer.
-    Treat the response as success only when it contains a concrete tweet identifier.
-    """
-    if not isinstance(data, dict):
-        return False, "Unexpected response format from server"
-
-    errors = data.get('errors')
-    if isinstance(errors, list) and errors:
-        err_msgs = [e.get('message', 'Unknown GraphQL Error') for e in errors if isinstance(e, dict)]
-        return False, f"GraphQL Error: {', '.join(err_msgs) or 'Unknown GraphQL Error'}"
-
-    result = (
-        data.get('data', {})
-        .get('create_tweet', {})
-        .get('tweet_results', {})
-        .get('result', {})
-    )
-
-    if not isinstance(result, dict):
-        return False, "CreateTweet response missing result payload"
-
-    rest_id = result.get('rest_id')
-    legacy_id = result.get('legacy', {}).get('id_str') if isinstance(result.get('legacy'), dict) else None
-    typename = result.get('__typename')
-
-    if rest_id or legacy_id:
-        return True, ""
-
-    if typename:
-        return False, f"CreateTweet returned {typename} without a tweet id"
-
-    return False, "CreateTweet response missing tweet id"

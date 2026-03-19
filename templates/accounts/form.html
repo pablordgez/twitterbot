@@ -28,6 +28,13 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label">Posting Method</label>
+                            {{ form.auth_mode }}
+                            {% if form.auth_mode.errors %}<div class="text-danger mt-1">{{ form.auth_mode.errors }}</div>{% endif %}
+                            <small class="form-hint">Use request secrets from a copied cURL request, or log in through a real headless browser.</small>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Notification Mode</label>
                             {{ form.notification_mode }}
                             {% if form.notification_mode.errors %}<div class="text-danger mt-1">{{ form.notification_mode.errors }}</div>{% endif %}

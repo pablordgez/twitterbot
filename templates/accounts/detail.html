@@ -26,22 +26,76 @@
             
             <!-- Left col: Credentials & Import -->
             <div class="col-md-7">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title">Browser Login</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if browser_credentials_configured %}
+                            <div class="alert alert-success">
+                                <h4 class="alert-title">Browser Credentials Configured</h4>
+                                <div class="text-muted">This account can log in through a real headless browser flow.</div>
+                            </div>
+                        {% elif account.auth_mode == 'browser' %}
+                            <div class="alert alert-warning">
+                                <h4 class="alert-title">Browser Credentials Required</h4>
+                                <div class="text-muted">This account is set to browser login mode but no username/password has been saved yet.</div>
+                            </div>
+                        {% endif %}
+
+                        <form action="{% url 'core:account_browser_credentials' account.pk %}" method="post">
+                            {% csrf_token %}
+                            {% if browser_form.non_field_errors %}
+                            <div class="alert alert-danger">{{ browser_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label class="form-label">Username / Email / Phone</label>
+                                {{ browser_form.username }}
+                                {% if browser_form.username.errors %}<div class="text-danger mt-1">{{ browser_form.username.errors }}</div>{% endif %}
+                                <div class="form-hint mt-2">{{ browser_form.username.help_text }}</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                {{ browser_form.password }}
+                                {% if browser_form.password.errors %}<div class="text-danger mt-1">{{ browser_form.password.errors }}</div>{% endif %}
+                                <div class="form-hint mt-2">{{ browser_form.password.help_text }}</div>
+                            </div>
+
+                            <div>
+                                <button type="submit" class="btn btn-primary">Save Browser Credentials</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">X/Twitter Authentication</h3>
                     </div>
                     <div class="card-body">
-                        {% if secret_masked %}
+                        {% if secret_masked or browser_credentials_configured %}
                             <div class="alert alert-success">
                                 <h4 class="alert-title">Credentials Configured</h4>
-                                <div class="text-muted">Secret Hash: <code>{{ secret_masked }}</code></div>
+                                {% if account.auth_mode == 'browser' %}
+                                    <div class="text-muted">Browser login credentials are stored for this account.</div>
+                                {% else %}
+                                    <div class="text-muted">Secret Hash: <code>{{ secret_masked }}</code></div>
+                                {% endif %}
                             </div>
                             
                             <!-- Test Post Section -->
                             <div class="card bg-azure-lt border-azure mb-3">
                                 <div class="card-body">
                                     <h4 class="card-title text-azure">Verify Authentication</h4>
-                                    <p class="text-secondary small">Perform a real-world test to ensure extracted secrets still work.</p>
+                                    <p class="text-secondary small">
+                                        {% if account.auth_mode == 'browser' %}
+                                            Perform a real-world test through the browser login flow.
+                                        {% else %}
+                                            Perform a real-world test to ensure extracted secrets still work.
+                                        {% endif %}
+                                    </p>
                                     <form action="{% url 'core:account_test_post' account.pk %}" method="post" onsubmit="return confirm('This will attempt a REAL POST to X/Twitter with the exact text: test\n\nAre you sure you want to proceed?');">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-azure">
@@ -55,9 +109,11 @@
                                 </div>
                             </div>
                             
-                            <hr class="my-4">
-                            <h4 class="mb-3">Update Credentials</h4>
-                            <p class="text-muted">Import a new cURL command to replace the existing secrets.</p>
+                            {% if account.auth_mode != 'browser' %}
+                                <hr class="my-4">
+                                <h4 class="mb-3">Update Credentials</h4>
+                                <p class="text-muted">Import a new cURL command to replace the existing secrets.</p>
+                            {% endif %}
                         {% else %}
                             <div class="alert alert-warning">
                                 <h4 class="alert-title">No Credentials</h4>
@@ -107,6 +163,10 @@
                                         <span class="status status-secondary">Inactive</span>
                                     {% endif %}
                                 </div>
+                            </div>
+                            <div class="datagrid-item">
+                                <div class="datagrid-title">Posting Method</div>
+                                <div class="datagrid-content">{{ account.get_auth_mode_display }}</div>
                             </div>
                             <div class="datagrid-item">
                                 <div class="datagrid-title">Notification Mode</div>

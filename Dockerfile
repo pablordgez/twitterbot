@@ -34,6 +34,7 @@ RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
 # Install the wheels from the builder stage
 COPY --from=builder /build/wheels /wheels
 RUN pip install --no-cache /wheels/* && \
+    python -m playwright install --with-deps chromium && \
     rm -rf /wheels
 
 # Copy application code

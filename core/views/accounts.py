@@ -9,9 +9,9 @@ import json
 import hashlib
 from uuid import uuid4
 
-from core.models.accounts import PostingAccount, PostingAccountSecret
+from core.models.accounts import PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential
 from core.services.history import log_event
-from core.forms.accounts import PostingAccountForm, CurlImportForm
+from core.forms.accounts import PostingAccountForm, CurlImportForm, BrowserCredentialForm
 from core.services.encryption import encrypt, mask_value
 from core.services.dependency_cascade import check_account_dependencies, cascade_cancel
 
@@ -63,10 +63,12 @@ class AccountDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['curl_form'] = CurlImportForm()
+        context['browser_form'] = BrowserCredentialForm()
         if hasattr(self.object, 'secret'):
             context['secret_masked'] = mask_value(self.object.secret.field_hash, 4)
         else:
             context['secret_masked'] = None
+        context['browser_credentials_configured'] = hasattr(self.object, 'browser_credential')
         return context
 
 class AccountCurlImportView(LoginRequiredMixin, View):
@@ -112,6 +114,48 @@ class AccountCurlImportView(LoginRequiredMixin, View):
                 'secret_masked': mask_value(account.secret.field_hash, 4) if hasattr(account, 'secret') else None
             }
             return render(request, 'accounts/curl_import.html', context)
+
+
+class AccountBrowserCredentialView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        account = get_object_or_404(PostingAccount, pk=pk)
+        form = BrowserCredentialForm(request.POST)
+
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+
+            with transaction.atomic():
+                is_replacement = hasattr(account, 'browser_credential')
+                PostingAccountBrowserCredential.objects.update_or_create(
+                    account=account,
+                    defaults={
+                        'encrypted_username': encrypt(username),
+                        'encrypted_password': encrypt(password),
+                    },
+                )
+                if account.auth_mode != PostingAccount.AuthMode.BROWSER:
+                    account.auth_mode = PostingAccount.AuthMode.BROWSER
+                    account.save(update_fields=['auth_mode', 'updated_at'])
+
+                log_event(
+                    event_type='ACCOUNT_BROWSER_CREDENTIALS_REPLACED' if is_replacement else 'ACCOUNT_BROWSER_CREDENTIALS_SAVED',
+                    account=account,
+                    content_summary='Browser login credentials saved',
+                    result_status='success',
+                )
+
+            messages.success(request, 'Browser login credentials saved successfully.')
+            return redirect('core:account_detail', pk=pk)
+
+        context = {
+            'account': account,
+            'curl_form': CurlImportForm(),
+            'browser_form': form,
+            'secret_masked': mask_value(account.secret.field_hash, 4) if hasattr(account, 'secret') else None,
+            'browser_credentials_configured': hasattr(account, 'browser_credential'),
+        }
+        return render(request, 'accounts/detail.html', context)
 
 class AccountTestPostView(LoginRequiredMixin, View):
     def post(self, request, pk):

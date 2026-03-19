@@ -1,4 +1,4 @@
-from .accounts import PostingAccount, PostingAccountSecret
+from .accounts import PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential
 from .tweets import TweetList, TweetEntry
 from .schedules import Schedule, ScheduleTargetAccount, ScheduleSourceList
 from .execution import Occurrence, OccurrenceAttempt, RecurringUsageState
@@ -9,6 +9,7 @@ from .system import SchedulerLease
 __all__ = [
     'PostingAccount',
     'PostingAccountSecret',
+    'PostingAccountBrowserCredential',
     'TweetList',
     'TweetEntry',
     'Schedule',

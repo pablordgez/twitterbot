@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.db import IntegrityError
 from core.models import (
-    PostingAccount, PostingAccountSecret, TweetList, TweetEntry, Schedule,
+    PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential, TweetList, TweetEntry, Schedule,
     ScheduleTargetAccount, ScheduleSourceList, Occurrence, OccurrenceAttempt
 )
 from django.utils import timezone
@@ -11,6 +11,7 @@ class TestPostingAccount(TestCase):
         acc = PostingAccount.objects.create(name="Test Account")
         self.assertEqual(acc.name, "Test Account")
         self.assertTrue(acc.is_active)
+        self.assertEqual(acc.auth_mode, PostingAccount.AuthMode.REQUEST)
         self.assertEqual(acc.notification_mode, PostingAccount.NotificationMode.FIRST_FAILURE)
 
         sec = PostingAccountSecret.objects.create(
@@ -19,6 +20,13 @@ class TestPostingAccount(TestCase):
             field_hash="hash"
         )
         self.assertEqual(sec.account, acc)
+
+        browser_credential = PostingAccountBrowserCredential.objects.create(
+            account=PostingAccount.objects.create(name='Browser Account', auth_mode=PostingAccount.AuthMode.BROWSER),
+            encrypted_username=b'user',
+            encrypted_password=b'pass',
+        )
+        self.assertEqual(browser_credential.account.auth_mode, PostingAccount.AuthMode.BROWSER)
 
 class TestTweetList(TestCase):
     def test_create_tweet_list(self):

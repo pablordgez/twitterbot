@@ -5,9 +5,10 @@ from core.services.curl_parser import parse_curl_command, CurlParseError
 class PostingAccountForm(forms.ModelForm):
     class Meta:
         model = PostingAccount
-        fields = ['name', 'is_active', 'notification_mode']
+        fields = ['name', 'auth_mode', 'is_active', 'notification_mode']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'auth_mode': forms.Select(attrs={'class': 'form-select'}),
             'notification_mode': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'})
         }
@@ -29,3 +30,21 @@ class CurlImportForm(forms.Form):
             return parsed
         except CurlParseError as e:
             raise forms.ValidationError(str(e))
+
+
+class BrowserCredentialForm(forms.Form):
+    username = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'autocomplete': 'username',
+        }),
+        help_text='Username, email, or phone number accepted by the X login flow.',
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'autocomplete': 'current-password',
+        }),
+        help_text='Stored encrypted. Some accounts may still require challenge or 2FA in the browser flow.',
+    )

@@ -5,7 +5,7 @@ from django.test import TestCase
 
 import requests
 
-from core.models.accounts import PostingAccount, PostingAccountSecret
+from core.models.accounts import PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential
 from core.models.schedules import Schedule
 from core.models.execution import Occurrence, OccurrenceAttempt
 from core.services.encryption import encrypt
@@ -58,7 +58,7 @@ class PostingExecutorTests(TestCase):
         self.attempt.refresh_from_db()
         self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.VALIDATION_FAILED)
         self.assertFalse(self.attempt.validation_ok)
-        self.assertIn("missing secrets", self.attempt.error_detail.lower())
+        self.assertIn("missing request secrets", self.attempt.error_detail.lower())
         mock_post.assert_not_called()
 
     @patch('core.services.posting_executor.requests.post')
@@ -141,6 +141,24 @@ class PostingExecutorTests(TestCase):
 
         self.assertFalse(success)
         self.assertIn("Connection failed", error)
+
+    @patch('core.services.posting_executor.execute_browser_post')
+    def test_browser_auth_mode_uses_browser_executor(self, mock_browser_post):
+        self.account.auth_mode = PostingAccount.AuthMode.BROWSER
+        self.account.save(update_fields=['auth_mode'])
+        PostingAccountBrowserCredential.objects.create(
+            account=self.account,
+            encrypted_username=encrypt('user@example.com'),
+            encrypted_password=encrypt('secret-password'),
+        )
+        mock_browser_post.return_value = (True, "", {"status_code": 200, "mode": "browser"})
+
+        execute_attempt(self.attempt)
+
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.post_result, OccurrenceAttempt.PostResult.SUCCESS)
+        self.assertEqual(self.attempt.external_response_meta['mode'], 'browser')
+        mock_browser_post.assert_called_once_with(self.account, "Hello Twitter!")
 
     @patch('core.services.posting_executor.requests.post')
     def test_independence_does_not_block_others(self, mock_post):

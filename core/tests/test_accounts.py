@@ -7,10 +7,10 @@ from datetime import timedelta
 from django.test import TestCase, Client
 from unittest.mock import patch, MagicMock
 
-from core.models.accounts import PostingAccount, PostingAccountSecret
+from core.models.accounts import PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential
 from core.models.schedules import Schedule, ScheduleTargetAccount
 from core.models.history import HistoryEvent
-from core.services.encryption import get_fernet_instance
+from core.services.encryption import get_fernet_instance, decrypt
 
 User = get_user_model()
 
@@ -40,6 +40,7 @@ class AccountTests(TestCase):
         url = reverse('core:account_create')
         response = self.client.post(url, {
             'name': 'New Account',
+            'auth_mode': 'request',
             'is_active': True,
             'notification_mode': 'none'
         })
@@ -51,12 +52,14 @@ class AccountTests(TestCase):
         url = reverse('core:account_update', kwargs={'pk': self.account.pk})
         response = self.client.post(url, {
             'name': 'Updated Name',
+            'auth_mode': 'browser',
             'is_active': False,
             'notification_mode': 'every_failure'
         })
         self.assertEqual(response.status_code, 302)
         self.account.refresh_from_db()
         self.assertEqual(self.account.name, 'Updated Name')
+        self.assertEqual(self.account.auth_mode, PostingAccount.AuthMode.BROWSER)
         self.assertFalse(self.account.is_active)
         self.assertTrue(HistoryEvent.objects.filter(event_type='ACCOUNT_UPDATED', account=self.account).exists())
 
@@ -103,11 +106,35 @@ class AccountTests(TestCase):
         self.assertIsNotNone(event)
         self.assertEqual(event.event_type, 'ACCOUNT_IMPORT_ACCEPTED')
 
+    def test_browser_credentials_save(self):
+        url = reverse('core:account_browser_credentials', kwargs={'pk': self.account.pk})
+        response = self.client.post(url, {
+            'username': 'user@example.com',
+            'password': 'super-secret-password',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        self.account.refresh_from_db()
+        self.assertEqual(self.account.auth_mode, PostingAccount.AuthMode.BROWSER)
+        self.assertTrue(hasattr(self.account, 'browser_credential'))
+
+        creds = PostingAccountBrowserCredential.objects.get(account=self.account)
+        self.assertEqual(decrypt(creds.encrypted_username), 'user@example.com')
+        self.assertEqual(decrypt(creds.encrypted_password), 'super-secret-password')
+        self.assertTrue(
+            HistoryEvent.objects.filter(
+                event_type='ACCOUNT_BROWSER_CREDENTIALS_SAVED',
+                account=self.account,
+            ).exists()
+        )
+
     @patch('core.services.posting_executor.requests.post')
     def test_test_post_requires_csrf_post(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"data": {"tweet": "ok"}}
+        mock_response.json.return_value = {
+            "data": {"create_tweet": {"tweet_results": {"result": {"rest_id": "123"}}}}
+        }
         mock_post.return_value = mock_response
 
         url = reverse('core:account_test_post', kwargs={'pk': self.account.pk})
