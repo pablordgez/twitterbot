@@ -1,6 +1,7 @@
 import os
 import logging
 import json
+import time
 from datetime import datetime, UTC
 from pathlib import Path
 
@@ -10,6 +11,17 @@ from core.services.history import redact_secrets
 from core.services.x_response_parser import interpret_create_tweet_response
 
 logger = logging.getLogger(__name__)
+
+POST_BUTTON_SELECTORS = [
+    '[data-testid="tweetButtonInline"]',
+    '[data-testid="tweetButton"]',
+    'button:has-text("Post")',
+    'div[role="button"]:has-text("Post")',
+    'button:has-text("Tweet")',
+    'div[role="button"]:has-text("Tweet")',
+    'button:has-text("Publicar")',
+    'div[role="button"]:has-text("Publicar")',
+]
 
 STEALTH_INIT_SCRIPT = """
 Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
@@ -141,16 +153,7 @@ def _submit_tweet(page, content: str, *, timeout_ms: int) -> tuple[bool, str, di
     editor.click()
     page.keyboard.type(content, delay=25)
 
-    with page.expect_response(
-        lambda response: '/CreateTweet' in response.url and response.request.method == 'POST',
-        timeout=timeout_ms,
-    ) as response_info:
-        _click_first(page, [
-            '[data-testid="tweetButtonInline"]',
-            '[data-testid="tweetButton"]',
-        ])
-
-    response = response_info.value
+    response = _dispatch_post(page, timeout_ms=timeout_ms)
     response_meta = {'status_code': response.status, 'mode': 'browser'}
 
     try:
@@ -168,6 +171,91 @@ def _submit_tweet(page, content: str, *, timeout_ms: int) -> tuple[bool, str, di
         str(redact_secrets(data))[:1000],
     )
     return success, error_detail, response_meta
+
+
+def _dispatch_post(page, *, timeout_ms: int):
+    attempts = [
+        ('button click', lambda: _click_post_button(page, timeout_ms=min(timeout_ms, 8000))),
+        ('Control+Enter', lambda: page.keyboard.press('Control+Enter')),
+    ]
+
+    last_error = None
+    response_timeout = min(timeout_ms, 12000)
+
+    for label, action in attempts:
+        try:
+            with page.expect_response(
+                lambda response: '/CreateTweet' in response.url and response.request.method == 'POST',
+                timeout=response_timeout,
+            ) as response_info:
+                action()
+            logger.info('Browser post submitted via %s', label)
+            return response_info.value
+        except PlaywrightTimeoutError as exc:
+            last_error = exc
+            logger.warning('Browser post submit attempt timed out via %s', label)
+        except Exception as exc:
+            last_error = exc
+            logger.warning('Browser post submit attempt failed via %s: %s', label, str(exc))
+
+    raise RuntimeError(f'Could not submit tweet after multiple attempts: {last_error}')
+
+
+def _click_post_button(page, *, timeout_ms: int):
+    deadline = time.monotonic() + (timeout_ms / 1000)
+    last_states = []
+
+    while time.monotonic() < deadline:
+        current_states = []
+        for selector in POST_BUTTON_SELECTORS:
+            locator = page.locator(selector).first
+            try:
+                count = locator.count()
+            except Exception:
+                continue
+
+            if not count:
+                continue
+
+            try:
+                visible = locator.is_visible()
+            except Exception:
+                visible = False
+
+            if not visible:
+                current_states.append(f'{selector}=hidden')
+                continue
+
+            disabled = _is_disabled(locator)
+            current_states.append(f'{selector}={"disabled" if disabled else "enabled"}')
+            if disabled:
+                continue
+
+            try:
+                locator.scroll_into_view_if_needed(timeout=min(timeout_ms, 2000))
+            except Exception:
+                pass
+
+            locator.click(timeout=min(timeout_ms, 5000))
+            return selector
+
+        if current_states:
+            last_states = current_states
+        page.wait_for_timeout(200)
+
+    state_summary = ', '.join(last_states) if last_states else 'no visible post button found'
+    raise RuntimeError(f'Could not find an enabled post button: {state_summary}')
+
+
+def _is_disabled(locator) -> bool:
+    disabled_attr = locator.get_attribute('disabled')
+    aria_disabled = locator.get_attribute('aria-disabled')
+    data_disabled = locator.get_attribute('data-disabled')
+    return (
+        disabled_attr is not None
+        or aria_disabled == 'true'
+        or data_disabled == 'true'
+    )
 
 
 def _click_first(page, selectors):
