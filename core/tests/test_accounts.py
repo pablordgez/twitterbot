@@ -7,6 +7,7 @@ from datetime import timedelta
 from django.test import TestCase, Client
 from unittest.mock import patch, MagicMock
 
+from core.forms.accounts import BrowserSessionStateForm
 from core.models.accounts import PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential
 from core.models.schedules import Schedule, ScheduleTargetAccount
 from core.models.history import HistoryEvent
@@ -131,20 +132,51 @@ class AccountTests(TestCase):
     def test_browser_session_state_save(self):
         url = reverse('core:account_browser_session', kwargs={'pk': self.account.pk})
         response = self.client.post(url, {
-            'storage_state': '{"cookies": [], "origins": []}',
+            'storage_state': '{"cookies": [{"name": "auth_token", "value": "A", "domain": ".x.com", "path": "/"}], "origins": []}',
         })
         self.assertEqual(response.status_code, 302)
 
         self.account.refresh_from_db()
         self.assertEqual(self.account.auth_mode, PostingAccount.AuthMode.BROWSER)
         creds = PostingAccountBrowserCredential.objects.get(account=self.account)
-        self.assertEqual(decrypt(creds.encrypted_storage_state), '{"cookies": [], "origins": []}')
+        self.assertEqual(
+            json.loads(decrypt(creds.encrypted_storage_state)),
+            {
+                'cookies': [{
+                    'name': 'auth_token',
+                    'value': 'A',
+                    'domain': '.x.com',
+                    'path': '/',
+                    'expires': -1,
+                    'httpOnly': False,
+                    'secure': True,
+                    'sameSite': 'None',
+                }],
+                'origins': [],
+            },
+        )
         self.assertTrue(
             HistoryEvent.objects.filter(
                 event_type='ACCOUNT_BROWSER_SESSION_SAVED',
                 account=self.account,
             ).exists()
         )
+
+    def test_browser_session_state_save_cookie_header(self):
+        url = reverse('core:account_browser_session', kwargs={'pk': self.account.pk})
+        response = self.client.post(url, {
+            'storage_state': 'Cookie: auth_token=AUTH; ct0=CSRF; twid=TWID',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        creds = PostingAccountBrowserCredential.objects.get(account=self.account)
+        saved_state = json.loads(decrypt(creds.encrypted_storage_state))
+        self.assertEqual(saved_state['origins'], [])
+        self.assertEqual(
+            [cookie['name'] for cookie in saved_state['cookies']],
+            ['auth_token', 'ct0', 'twid'],
+        )
+        self.assertTrue(all(cookie['domain'] == '.x.com' for cookie in saved_state['cookies']))
 
     @patch('core.services.posting_executor.requests.post')
     def test_test_post_requires_csrf_post(self, mock_post):
@@ -179,3 +211,46 @@ class AccountTests(TestCase):
                 correlation_id=outcome.correlation_id,
             ).exists()
         )
+
+
+class BrowserSessionStateFormTests(TestCase):
+    def test_accepts_cookie_array_json(self):
+        form = BrowserSessionStateForm(data={
+            'storage_state': '[{"name":"auth_token","value":"A","domain":".x.com","path":"/"}]',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        cleaned = json.loads(form.cleaned_data['storage_state'])
+        self.assertEqual(cleaned['origins'], [])
+        self.assertEqual(cleaned['cookies'][0]['name'], 'auth_token')
+        self.assertEqual(cleaned['cookies'][0]['sameSite'], 'None')
+
+    def test_accepts_cookie_map_json(self):
+        form = BrowserSessionStateForm(data={
+            'storage_state': '{"auth_token":"A","ct0":"B"}',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        cleaned = json.loads(form.cleaned_data['storage_state'])
+        self.assertEqual(
+            [cookie['name'] for cookie in cleaned['cookies']],
+            ['auth_token', 'ct0'],
+        )
+
+    def test_accepts_raw_cookie_header(self):
+        form = BrowserSessionStateForm(data={
+            'storage_state': 'auth_token=A; ct0=B; twid=C',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        cleaned = json.loads(form.cleaned_data['storage_state'])
+        self.assertEqual(len(cleaned['cookies']), 3)
+        self.assertEqual(cleaned['cookies'][0]['domain'], '.x.com')
+
+    def test_rejects_invalid_session_import(self):
+        form = BrowserSessionStateForm(data={
+            'storage_state': '{"cookies":{"bad":"shape"}}',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('Cookies must be an array.', form.errors['storage_state'][0])

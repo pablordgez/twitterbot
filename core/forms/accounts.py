@@ -1,5 +1,6 @@
 from django import forms
 from core.models.accounts import PostingAccount
+from core.services.browser_session_state import BrowserSessionStateError, normalize_storage_state
 from core.services.curl_parser import parse_curl_command, CurlParseError
 
 class PostingAccountForm(forms.ModelForm):
@@ -57,22 +58,12 @@ class BrowserSessionStateForm(forms.Form):
             'rows': 8,
             'placeholder': '{"cookies": [...], "origins": [...]}',
         }),
-        help_text='Paste a Playwright storage state JSON captured from a real logged-in browser session.',
+        help_text='Paste Playwright storage state JSON, a browser cookie export JSON, a simple cookie map JSON, or a raw Cookie header from a real logged-in browser session.',
     )
 
     def clean_storage_state(self):
-        import json
-
         raw = self.cleaned_data['storage_state']
         try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            raise forms.ValidationError(f'Invalid JSON: {exc.msg}') from exc
-
-        if not isinstance(parsed, dict):
-            raise forms.ValidationError('Storage state must be a JSON object.')
-
-        if 'cookies' not in parsed:
-            raise forms.ValidationError('Storage state must include a cookies array.')
-
-        return raw
+            return normalize_storage_state(raw)
+        except BrowserSessionStateError as exc:
+            raise forms.ValidationError(str(exc)) from exc

@@ -11,6 +11,13 @@ from core.services.x_response_parser import interpret_create_tweet_response
 
 logger = logging.getLogger(__name__)
 
+STEALTH_INIT_SCRIPT = """
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+window.chrome = window.chrome || { runtime: {} };
+Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+"""
+
 try:
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
     PLAYWRIGHT_IMPORT_ERROR = None
@@ -37,14 +44,16 @@ def execute_browser_post(account: PostingAccount, content: str) -> tuple[bool, s
     timeout_ms = int(os.environ.get('X_BROWSER_TIMEOUT_MS', '45000'))
     headless = os.environ.get('X_BROWSER_HEADLESS', 'true').lower() != 'false'
     slow_mo = int(os.environ.get('X_BROWSER_SLOW_MO_MS', '0'))
+    channel = os.environ.get('X_BROWSER_CHANNEL', '').strip()
 
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=headless, slow_mo=slow_mo)
+            browser = _launch_browser(playwright, headless=headless, slow_mo=slow_mo, channel=channel)
             context_kwargs = {'locale': 'en-US'}
             if storage_state:
                 context_kwargs['storage_state'] = storage_state
             context = browser.new_context(**context_kwargs)
+            context.add_init_script(STEALTH_INIT_SCRIPT)
             page = context.new_page()
             page.set_default_timeout(timeout_ms)
             trace_started = False
@@ -180,6 +189,23 @@ def _load_storage_state(account: PostingAccount):
     if not isinstance(parsed, dict):
         raise ValueError('Storage state must decrypt to a JSON object')
     return parsed
+
+
+def _launch_browser(playwright, *, headless: bool, slow_mo: int, channel: str):
+    launch_kwargs = {
+        'headless': headless,
+        'slow_mo': slow_mo,
+        'args': [
+            '--disable-blink-features=AutomationControlled',
+            '--disable-dev-shm-usage',
+            '--start-maximized',
+        ],
+    }
+    if channel:
+        launch_kwargs['channel'] = channel
+        logger.info('Launching browser with channel=%s', channel)
+
+    return playwright.chromium.launch(**launch_kwargs)
 
 
 def _capture_debug_artifacts(context, page, *, label: str, trace_started: bool) -> dict:

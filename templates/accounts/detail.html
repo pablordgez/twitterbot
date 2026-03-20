@@ -83,8 +83,22 @@
                             <div class="alert alert-danger">{{ browser_session_form.non_field_errors }}</div>
                             {% endif %}
 
+                            <div class="alert alert-info">
+                                <h4 class="alert-title">Export From Your Regular Browser</h4>
+                                <div class="text-muted">
+                                    1. Log into X in Chrome, Edge, or Firefox.
+                                    2. Open DevTools and go to <code>Network</code>.
+                                    3. Reload the page and open any request to <code>x.com</code>.
+                                    4. Copy the <code>Cookie</code> request header value.
+                                    5. Paste that raw cookie string here.
+                                </div>
+                                <div class="form-hint mt-2">
+                                    Example: <code>auth_token=...; ct0=...; twid=...</code>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
-                                <label class="form-label">Playwright Storage State JSON</label>
+                                <label class="form-label">Browser Session Import</label>
                                 {{ browser_session_form.storage_state }}
                                 {% if browser_session_form.storage_state.errors %}<div class="text-danger mt-1">{{ browser_session_form.storage_state.errors }}</div>{% endif %}
                                 <div class="form-hint mt-2">{{ browser_session_form.storage_state.help_text }}</div>
