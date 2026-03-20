@@ -6,7 +6,7 @@ from .views.dashboard import DashboardView
 from .views.accounts import (
     AccountListView, AccountCreateView, AccountUpdateView,
     AccountDetailView, AccountDeleteView, AccountCurlImportView, AccountTestPostView,
-    AccountBrowserCredentialView
+    AccountBrowserCredentialView, AccountBrowserSessionStateView
 )
 from .views.tweet_lists import (
     TweetListListView, TweetListCreateView, TweetListUpdateView, TweetListDeleteView, TweetListDetailView
@@ -45,6 +45,7 @@ urlpatterns = [
     path('accounts/<int:pk>/delete/', AccountDeleteView.as_view(), name='account_delete'),
     path('accounts/<int:pk>/import/', AccountCurlImportView.as_view(), name='account_import'),
     path('accounts/<int:pk>/browser-credentials/', AccountBrowserCredentialView.as_view(), name='account_browser_credentials'),
+    path('accounts/<int:pk>/browser-session/', AccountBrowserSessionStateView.as_view(), name='account_browser_session'),
     path('accounts/<int:pk>/test_post/', AccountTestPostView.as_view(), name='account_test_post'),
 
     path('tweet-lists/', TweetListListView.as_view(), name='tweet_list_list'),

@@ -67,6 +67,33 @@
                                 <button type="submit" class="btn btn-primary">Save Browser Credentials</button>
                             </div>
                         </form>
+
+                        <hr class="my-4">
+
+                        {% if browser_session_configured %}
+                            <div class="alert alert-success">
+                                <h4 class="alert-title">Saved Browser Session</h4>
+                                <div class="text-muted">Posting can reuse an existing authenticated browser session and skip automated login.</div>
+                            </div>
+                        {% endif %}
+
+                        <form action="{% url 'core:account_browser_session' account.pk %}" method="post">
+                            {% csrf_token %}
+                            {% if browser_session_form.non_field_errors %}
+                            <div class="alert alert-danger">{{ browser_session_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label class="form-label">Playwright Storage State JSON</label>
+                                {{ browser_session_form.storage_state }}
+                                {% if browser_session_form.storage_state.errors %}<div class="text-danger mt-1">{{ browser_session_form.storage_state.errors }}</div>{% endif %}
+                                <div class="form-hint mt-2">{{ browser_session_form.storage_state.help_text }}</div>
+                            </div>
+
+                            <div>
+                                <button type="submit" class="btn btn-outline-primary">Save Browser Session State</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 

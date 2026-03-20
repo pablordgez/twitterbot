@@ -132,8 +132,12 @@ def execute_attempt(attempt: OccurrenceAttempt):
             _fail_attempt(attempt, "validation_failed", "Account missing browser credentials")
             return
         try:
-            decrypt(account.browser_credential.encrypted_username)
-            decrypt(account.browser_credential.encrypted_password)
+            username = decrypt(account.browser_credential.encrypted_username)
+            password = decrypt(account.browser_credential.encrypted_password)
+            has_storage_state = bool(account.browser_credential.encrypted_storage_state)
+            if not has_storage_state and (not username or not password):
+                _fail_attempt(attempt, "validation_failed", "Account missing browser login details")
+                return
         except Exception:
             _fail_attempt(attempt, "validation_failed", "Browser credentials decryptable check failed")
             return
@@ -209,8 +213,11 @@ def execute_test_post(account: PostingAccount, content: str = 'test') -> tuple[b
         if not hasattr(account, 'browser_credential'):
             return False, "Account missing browser credentials"
         try:
-            decrypt(account.browser_credential.encrypted_username)
-            decrypt(account.browser_credential.encrypted_password)
+            username = decrypt(account.browser_credential.encrypted_username)
+            password = decrypt(account.browser_credential.encrypted_password)
+            has_storage_state = bool(account.browser_credential.encrypted_storage_state)
+            if not has_storage_state and (not username or not password):
+                return False, "Account missing browser login details"
         except Exception:
             return False, "Browser credentials decryptable check failed"
     else:

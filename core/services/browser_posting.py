@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from datetime import datetime, UTC
 from pathlib import Path
 
@@ -29,8 +30,9 @@ def execute_browser_post(account: PostingAccount, content: str) -> tuple[bool, s
     try:
         username = decrypt(account.browser_credential.encrypted_username)
         password = decrypt(account.browser_credential.encrypted_password)
+        storage_state = _load_storage_state(account)
     except Exception:
-        return False, 'Browser credentials decryptable check failed', {}
+        return False, 'Browser credentials or storage state decryptable check failed', {}
 
     timeout_ms = int(os.environ.get('X_BROWSER_TIMEOUT_MS', '45000'))
     headless = os.environ.get('X_BROWSER_HEADLESS', 'true').lower() != 'false'
@@ -39,7 +41,10 @@ def execute_browser_post(account: PostingAccount, content: str) -> tuple[bool, s
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=headless, slow_mo=slow_mo)
-            context = browser.new_context(locale='en-US')
+            context_kwargs = {'locale': 'en-US'}
+            if storage_state:
+                context_kwargs['storage_state'] = storage_state
+            context = browser.new_context(**context_kwargs)
             page = context.new_page()
             page.set_default_timeout(timeout_ms)
             trace_started = False
@@ -47,7 +52,12 @@ def execute_browser_post(account: PostingAccount, content: str) -> tuple[bool, s
             try:
                 context.tracing.start(screenshots=True, snapshots=True)
                 trace_started = True
-                _login(page, username, password)
+                if storage_state:
+                    logger.info('Browser post using saved storage state for account=%s', account.id)
+                    page.goto('https://x.com/home', wait_until='domcontentloaded')
+                else:
+                    logger.info('Browser post using username/password login for account=%s', account.id)
+                    _login(page, username, password)
                 success, error_detail, response_meta = _submit_tweet(page, content, timeout_ms=timeout_ms)
                 return success, error_detail, response_meta
             except PlaywrightTimeoutError:
@@ -158,6 +168,18 @@ def _click_first(page, selectors):
             locator.click()
             return
     raise RuntimeError(f'Could not find clickable element for selectors: {selectors}')
+
+
+def _load_storage_state(account: PostingAccount):
+    encrypted_storage_state = getattr(account.browser_credential, 'encrypted_storage_state', None)
+    if not encrypted_storage_state:
+        return None
+
+    decrypted = decrypt(encrypted_storage_state)
+    parsed = json.loads(decrypted)
+    if not isinstance(parsed, dict):
+        raise ValueError('Storage state must decrypt to a JSON object')
+    return parsed
 
 
 def _capture_debug_artifacts(context, page, *, label: str, trace_started: bool) -> dict:

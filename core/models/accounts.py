@@ -46,6 +46,7 @@ class PostingAccountBrowserCredential(models.Model):
     )
     encrypted_username = models.BinaryField()
     encrypted_password = models.BinaryField()
+    encrypted_storage_state = models.BinaryField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

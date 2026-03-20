@@ -11,7 +11,12 @@ from uuid import uuid4
 
 from core.models.accounts import PostingAccount, PostingAccountSecret, PostingAccountBrowserCredential
 from core.services.history import log_event
-from core.forms.accounts import PostingAccountForm, CurlImportForm, BrowserCredentialForm
+from core.forms.accounts import (
+    PostingAccountForm,
+    CurlImportForm,
+    BrowserCredentialForm,
+    BrowserSessionStateForm,
+)
 from core.services.encryption import encrypt, mask_value
 from core.services.dependency_cascade import check_account_dependencies, cascade_cancel
 
@@ -64,11 +69,15 @@ class AccountDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['curl_form'] = CurlImportForm()
         context['browser_form'] = BrowserCredentialForm()
+        context['browser_session_form'] = BrowserSessionStateForm()
         if hasattr(self.object, 'secret'):
             context['secret_masked'] = mask_value(self.object.secret.field_hash, 4)
         else:
             context['secret_masked'] = None
         context['browser_credentials_configured'] = hasattr(self.object, 'browser_credential')
+        context['browser_session_configured'] = bool(
+            hasattr(self.object, 'browser_credential') and self.object.browser_credential.encrypted_storage_state
+        )
         return context
 
 class AccountCurlImportView(LoginRequiredMixin, View):
@@ -152,8 +161,61 @@ class AccountBrowserCredentialView(LoginRequiredMixin, View):
             'account': account,
             'curl_form': CurlImportForm(),
             'browser_form': form,
+            'browser_session_form': BrowserSessionStateForm(),
             'secret_masked': mask_value(account.secret.field_hash, 4) if hasattr(account, 'secret') else None,
             'browser_credentials_configured': hasattr(account, 'browser_credential'),
+            'browser_session_configured': bool(
+                hasattr(account, 'browser_credential') and account.browser_credential.encrypted_storage_state
+            ),
+        }
+        return render(request, 'accounts/detail.html', context)
+
+
+class AccountBrowserSessionStateView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        account = get_object_or_404(PostingAccount, pk=pk)
+        form = BrowserSessionStateForm(request.POST)
+
+        if form.is_valid():
+            storage_state = form.cleaned_data['storage_state']
+
+            with transaction.atomic():
+                credential_defaults = {
+                    'encrypted_storage_state': encrypt(storage_state),
+                }
+                if not hasattr(account, 'browser_credential'):
+                    credential_defaults['encrypted_username'] = encrypt('')
+                    credential_defaults['encrypted_password'] = encrypt('')
+
+                PostingAccountBrowserCredential.objects.update_or_create(
+                    account=account,
+                    defaults=credential_defaults,
+                )
+
+                if account.auth_mode != PostingAccount.AuthMode.BROWSER:
+                    account.auth_mode = PostingAccount.AuthMode.BROWSER
+                    account.save(update_fields=['auth_mode', 'updated_at'])
+
+                log_event(
+                    event_type='ACCOUNT_BROWSER_SESSION_SAVED',
+                    account=account,
+                    content_summary='Browser storage state saved',
+                    result_status='success',
+                )
+
+            messages.success(request, 'Browser session state saved successfully.')
+            return redirect('core:account_detail', pk=pk)
+
+        context = {
+            'account': account,
+            'curl_form': CurlImportForm(),
+            'browser_form': BrowserCredentialForm(),
+            'browser_session_form': form,
+            'secret_masked': mask_value(account.secret.field_hash, 4) if hasattr(account, 'secret') else None,
+            'browser_credentials_configured': hasattr(account, 'browser_credential'),
+            'browser_session_configured': bool(
+                hasattr(account, 'browser_credential') and account.browser_credential.encrypted_storage_state
+            ),
         }
         return render(request, 'accounts/detail.html', context)
 

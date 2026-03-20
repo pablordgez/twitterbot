@@ -48,3 +48,31 @@ class BrowserCredentialForm(forms.Form):
         }),
         help_text='Stored encrypted. Some accounts may still require challenge or 2FA in the browser flow.',
     )
+
+
+class BrowserSessionStateForm(forms.Form):
+    storage_state = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 8,
+            'placeholder': '{"cookies": [...], "origins": [...]}',
+        }),
+        help_text='Paste a Playwright storage state JSON captured from a real logged-in browser session.',
+    )
+
+    def clean_storage_state(self):
+        import json
+
+        raw = self.cleaned_data['storage_state']
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise forms.ValidationError(f'Invalid JSON: {exc.msg}') from exc
+
+        if not isinstance(parsed, dict):
+            raise forms.ValidationError('Storage state must be a JSON object.')
+
+        if 'cookies' not in parsed:
+            raise forms.ValidationError('Storage state must include a cookies array.')
+
+        return raw

@@ -75,6 +75,11 @@ The application is designed to be deployed effortlessly via Docker Compose.
 
 1.  **First-Run Setup:** Upon first visiting the application, you will be prompted to create the single Administrator account. This is a one-time process.
 2.  **Add an Account:** Navigate to **Accounts > Add Account**. Open Twitter/X in your browser, open the Network Tab in Developer Tools, send a test tweet, right-click the `CreateTweet` request, and select "Copy as cURL (bash)". Paste this into the application.
+    If X blocks direct request-based posting or automated login, you can instead save a real browser session:
+    ```bash
+    py -3 scripts/export_x_storage_state.py
+    ```
+    Log into X manually in the opened browser, press Enter in the terminal, then paste the generated JSON from `data/browser-session/x-storage-state.json` into the account page under **Save Browser Session State**.
 3.  **Create Tweet Lists:** Go to **Tweet Lists** to manually add tweets or import them via CSV.
 4.  **Schedule Posts:** Navigate to **Schedules** to create new one-time or recurring posting tasks.
 
@@ -96,6 +101,7 @@ If you wish to run the application locally for development:
 2.  Install dependencies:
     ```bash
     pip install -r requirements.txt
+    python -m playwright install chromium
     ```
 3.  Set environment variables locally (or use a tool like `direnv`):
     ```bash

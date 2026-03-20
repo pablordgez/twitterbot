@@ -128,6 +128,24 @@ class AccountTests(TestCase):
             ).exists()
         )
 
+    def test_browser_session_state_save(self):
+        url = reverse('core:account_browser_session', kwargs={'pk': self.account.pk})
+        response = self.client.post(url, {
+            'storage_state': '{"cookies": [], "origins": []}',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        self.account.refresh_from_db()
+        self.assertEqual(self.account.auth_mode, PostingAccount.AuthMode.BROWSER)
+        creds = PostingAccountBrowserCredential.objects.get(account=self.account)
+        self.assertEqual(decrypt(creds.encrypted_storage_state), '{"cookies": [], "origins": []}')
+        self.assertTrue(
+            HistoryEvent.objects.filter(
+                event_type='ACCOUNT_BROWSER_SESSION_SAVED',
+                account=self.account,
+            ).exists()
+        )
+
     @patch('core.services.posting_executor.requests.post')
     def test_test_post_requires_csrf_post(self, mock_post):
         mock_response = MagicMock()
