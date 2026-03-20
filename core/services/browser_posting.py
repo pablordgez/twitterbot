@@ -1,5 +1,7 @@
 import os
 import logging
+from datetime import datetime, UTC
+from pathlib import Path
 
 from core.models.accounts import PostingAccount
 from core.services.encryption import decrypt
@@ -40,18 +42,35 @@ def execute_browser_post(account: PostingAccount, content: str) -> tuple[bool, s
             context = browser.new_context(locale='en-US')
             page = context.new_page()
             page.set_default_timeout(timeout_ms)
+            trace_started = False
 
             try:
+                context.tracing.start(screenshots=True, snapshots=True)
+                trace_started = True
                 _login(page, username, password)
                 success, error_detail, response_meta = _submit_tweet(page, content, timeout_ms=timeout_ms)
                 return success, error_detail, response_meta
+            except PlaywrightTimeoutError:
+                artifacts = _capture_debug_artifacts(context, page, label='timeout', trace_started=trace_started)
+                logger.warning('Browser automation timed out. Artifacts=%s', artifacts)
+                return False, _build_debug_error('Browser automation timed out while logging in or posting', artifacts), {
+                    'mode': 'browser',
+                    'artifacts': artifacts,
+                }
+            except Exception as exc:
+                artifacts = _capture_debug_artifacts(context, page, label='error', trace_started=trace_started)
+                logger.warning('Browser post failed: %s artifacts=%s', str(exc), artifacts)
+                return False, _build_debug_error(str(exc), artifacts), {
+                    'mode': 'browser',
+                    'artifacts': artifacts,
+                }
             finally:
+                if trace_started:
+                    _stop_trace_safely(context)
                 context.close()
                 browser.close()
-    except PlaywrightTimeoutError:
-        return False, 'Browser automation timed out while logging in or posting', {}
     except Exception as exc:
-        logger.warning('Browser post failed: %s', str(exc))
+        logger.warning('Browser setup failed: %s', str(exc))
         return False, str(exc), {}
 
 
@@ -139,3 +158,49 @@ def _click_first(page, selectors):
             locator.click()
             return
     raise RuntimeError(f'Could not find clickable element for selectors: {selectors}')
+
+
+def _capture_debug_artifacts(context, page, *, label: str, trace_started: bool) -> dict:
+    artifact_dir = Path(os.environ.get('X_BROWSER_ARTIFACT_DIR', '/app/data/browser-debug'))
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime('%Y%m%d-%H%M%S')
+    base = artifact_dir / f'x-browser-{stamp}-{label}'
+    artifacts = {}
+
+    try:
+        screenshot_path = base.with_suffix('.png')
+        page.screenshot(path=str(screenshot_path), full_page=True)
+        artifacts['screenshot'] = str(screenshot_path)
+    except Exception:
+        pass
+
+    try:
+        html_path = base.with_suffix('.html')
+        html_path.write_text(page.content(), encoding='utf-8')
+        artifacts['html'] = str(html_path)
+    except Exception:
+        pass
+
+    if trace_started:
+        try:
+            trace_path = base.with_suffix('.zip')
+            context.tracing.stop(path=str(trace_path))
+            artifacts['trace'] = str(trace_path)
+        except Exception:
+            pass
+
+    return artifacts
+
+
+def _stop_trace_safely(context):
+    try:
+        context.tracing.stop()
+    except Exception:
+        pass
+
+
+def _build_debug_error(message: str, artifacts: dict) -> str:
+    if not artifacts:
+        return message
+    artifact_summary = ', '.join(f'{key}={value}' for key, value in artifacts.items())
+    return f'{message}. Debug artifacts: {artifact_summary}'
