@@ -12,6 +12,7 @@ The system provides robust scheduling capabilities (one-time and recurring), twe
 
 *   **Single-Admin Interface:** Secure, authenticated dashboard for managing all operations.
 *   **cURL Account Import:** Configure posting accounts by simply pasting browser-copied cURL requests. The system automatically extracts, encrypts, and stores only the minimum required session fields, discarding the full raw request.
+    * Alternatively, set up login credentials or an existing session's cookies to simulate a real user workflow with a headless browser to avoid automation detection. This method is more risky and can lead to account suspensions, but the alternative HTTP based method might not work at all.  
 *   **Tweet Lists & CSV Import:** Organize tweets into reusable lists. Easily bulk-import tweets using single-column CSV files or direct text pasting.
 *   **Advanced Scheduling:**
     *   **One-time:** Schedule a specific tweet or a randomly selected tweet from a list for a precise time.
