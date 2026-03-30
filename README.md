@@ -75,14 +75,15 @@ The application is designed to be deployed effortlessly via Docker Compose.
 ## Initial Setup & Usage
 
 1.  **First-Run Setup:** Upon first visiting the application, you will be prompted to create the single Administrator account. This is a one-time process.
-2.  **Add an Account:** Navigate to **Accounts > Add Account**. Open Twitter/X in your browser, open the Network Tab in Developer Tools, send a test tweet, right-click the `CreateTweet` request, and select "Copy as cURL (bash)". Paste this into the application.
+2.  **Add an Account:** Navigate to **Accounts > Add Account**. Open Twitter/X in your browser, open the Network Tab in Developer Tools, send a test tweet, right-click the `CreateTweet` request, and select "Copy as cURL (bash)". Paste this into the application, or set the account up with your login details.
     If X blocks direct request-based posting or automated login, you can instead import a real browser session. The app accepts Playwright `storage_state`, browser cookie-export JSON, simple cookie-map JSON, or a raw `Cookie:` header. One way to generate a compatible export is:
     ```bash
     py -3 scripts/export_x_storage_state.py
     ```
     Log into X manually in the opened browser, press Enter in the terminal, then paste the generated JSON from `data/browser-session/x-storage-state.json` into the account page under **Browser Session Import**.
-3.  **Create Tweet Lists:** Go to **Tweet Lists** to manually add tweets or import them via CSV.
-4.  **Schedule Posts:** Navigate to **Schedules** to create new one-time or recurring posting tasks.
+    If this is detected as well, go into a regular browser, open the network tab in the browser's developer tools and copy the cookie header from any request, then paste it into **Browser Session Import**
+4.  **Create Tweet Lists:** Go to **Tweet Lists** to manually add tweets or import them via CSV.
+5.  **Schedule Posts:** Navigate to **Schedules** to create new one-time or recurring posting tasks.
 
 ## Security Considerations
 
