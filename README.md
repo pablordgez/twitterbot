@@ -4,7 +4,7 @@ A self-hosted, single-user administrative tool for configuring and operating pos
 
 ## Overview
 
-This application is designed to act as an ad hoc, self-hosted utility for managing one or more X/Twitter bot accounts. It bypasses the need for the official X/Twitter API by securely extracting and utilizing session data from browser-copied cURL requests. 
+This application is designed to act as an ad hoc, self-hosted utility for managing one or more X/Twitter bot accounts. It bypasses the need for the official X/Twitter API by securely extracting and utilizing session data from browser-copied cURL requests, login information or session cookies. 
 
 The system provides robust scheduling capabilities (one-time and recurring), tweet list management (including CSV imports), and a built-in execution engine, all packaged within a single, lightweight Docker container.
 
