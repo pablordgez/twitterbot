@@ -124,8 +124,16 @@ def execute_scheduler_tick(owner_id: str) -> bool:
 
 def run_scheduler_loop(owner_id: str, stop_event=None):
     logger.info(f"Starting scheduler loop with owner {owner_id}")
-    log_event('SCHEDULER_LEASE_ACQUIRED', detail={'owner_id': owner_id})
-    startup_scan_missed()
+    try:
+        log_event('SCHEDULER_LEASE_ACQUIRED', detail={'owner_id': owner_id})
+    except Exception:
+        logger.exception("Failed to record scheduler startup event")
+
+    try:
+        missed_count = startup_scan_missed()
+        logger.info("Scheduler startup missed-occurrence scan completed: %s marked missed", missed_count)
+    except Exception:
+        logger.exception("Scheduler startup missed-occurrence scan failed; scheduler will continue")
 
     while True:
         if stop_event and stop_event.is_set():

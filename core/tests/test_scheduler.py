@@ -12,7 +12,8 @@ from core.models.accounts import PostingAccount
 from core.services.scheduler import (
     acquire_or_renew_lease,
     startup_scan_missed,
-    execute_scheduler_tick
+    execute_scheduler_tick,
+    run_scheduler_loop,
 )
 
 class SchedulerTests(TestCase):
@@ -150,4 +151,27 @@ class SchedulerTests(TestCase):
 
         attempts = list(OccurrenceAttempt.objects.filter(occurrence=occ))
         self.assertEqual(len(attempts), 0)
+
+    @patch('core.services.scheduler.execute_scheduler_tick')
+    @patch('core.services.scheduler.startup_scan_missed')
+    def test_startup_scan_failure_does_not_stop_scheduler_loop(self, mock_scan, mock_tick):
+        mock_scan.side_effect = Exception("startup scan failed")
+
+        class StopAfterOneWait:
+            def __init__(self):
+                self.wait_calls = 0
+
+            def is_set(self):
+                return False
+
+            def wait(self, timeout):
+                self.wait_calls += 1
+                return True
+
+        stop_event = StopAfterOneWait()
+
+        run_scheduler_loop('test_owner', stop_event)
+
+        mock_tick.assert_called_once_with('test_owner')
+        self.assertEqual(stop_event.wait_calls, 1)
 

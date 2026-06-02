@@ -3,6 +3,7 @@ import sys
 import signal
 import threading
 import uuid
+import logging
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from django.db import connection
@@ -10,6 +11,36 @@ from django.db import connection
 import waitress
 from twitterbot.wsgi import application
 from core.services.scheduler import run_scheduler_loop
+from core.services.history import log_event
+
+
+logger = logging.getLogger(__name__)
+
+
+def scheduler_supervisor(stop_event, restart_delay_seconds=10):
+    """
+    Keep the embedded scheduler alive for the lifetime of the web process.
+
+    The web server can continue serving requests after a daemon thread exits, so
+    a scheduler crash otherwise looks like "active schedules but no posts".
+    """
+    while not stop_event.is_set():
+        owner_id = str(uuid.uuid4())
+        try:
+            run_scheduler_loop(owner_id, stop_event)
+        except Exception as exc:
+            logger.exception("Scheduler thread crashed")
+            try:
+                log_event(
+                    event_type='SCHEDULER_THREAD_CRASHED',
+                    detail={'owner_id': owner_id, 'error': str(exc)},
+                )
+            except Exception:
+                logger.exception("Failed to record scheduler crash event")
+
+        if stop_event.wait(restart_delay_seconds):
+            break
+
 
 class Command(BaseCommand):
     help = 'Runs the production server with scheduler and waitress'
@@ -46,11 +77,9 @@ class Command(BaseCommand):
         self.stdout.write("Starting scheduler thread...")
 
         stop_event = threading.Event()
-        owner_id = str(uuid.uuid4())
-
         scheduler_thread = threading.Thread(
-            target=run_scheduler_loop,
-            args=(owner_id, stop_event),
+            target=scheduler_supervisor,
+            args=(stop_event,),
             daemon=True
         )
         scheduler_thread.start()

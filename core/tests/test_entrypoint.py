@@ -4,6 +4,7 @@ from unittest.mock import patch, MagicMock
 from django.core.management import call_command
 from django.test import TestCase
 
+from core.management.commands.runproduction import scheduler_supervisor
 
 
 class TestRunProductionCommand(TestCase):
@@ -71,3 +72,27 @@ class TestRunProductionCommand(TestCase):
 
         mock_thread.return_value.join.assert_called_once()
         mock_exit.assert_called_once_with(0)
+
+    @patch('core.management.commands.runproduction.log_event')
+    @patch('core.management.commands.runproduction.run_scheduler_loop')
+    def test_scheduler_supervisor_restarts_after_crash(self, mock_loop, mock_log_event):
+        mock_loop.side_effect = [Exception("boom"), None]
+
+        class StopAfterSecondWait:
+            def __init__(self):
+                self.wait_calls = 0
+
+            def is_set(self):
+                return False
+
+            def wait(self, timeout):
+                self.wait_calls += 1
+                return self.wait_calls >= 2
+
+        stop_event = StopAfterSecondWait()
+
+        scheduler_supervisor(stop_event, restart_delay_seconds=0)
+
+        self.assertEqual(mock_loop.call_count, 2)
+        mock_log_event.assert_called_once()
+        self.assertEqual(stop_event.wait_calls, 2)
